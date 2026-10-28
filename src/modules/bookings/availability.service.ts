@@ -26,7 +26,7 @@ export class AvailabilityService {
     @InjectModel(Booking.name) private readonly bookings: Model<BookingDocument>,
   ) {}
 
-  async forService(businessId: string, serviceId: string, date: string, providerId?: string, durationOverride?: number) {
+  async forService(businessId: string, serviceId: string, date: string, providerId?: string, durationOverride?: number, options?: { ignoreWindow?: boolean }) {
     if (!isValidLocalDate(date)) throw new BadRequestException('Choose a valid date.');
     const [business, service] = await Promise.all([
       this.businesses.findById(businessId).lean().exec(),
@@ -43,7 +43,7 @@ export class AvailabilityService {
     const dayStart = zonedDate(date, '00:00', timezone);
     const dayEnd = zonedDate(date, '23:59', timezone);
     if (dayEnd < now) return { date, timezone, slots: [], service: this.serviceView(service), closed: true };
-    if (dayStart > windowEnd) return { date, timezone, slots: [], service: this.serviceView(service), closed: false };
+    if (!options?.ignoreWindow && dayStart > windowEnd) return { date, timezone, slots: [], service: this.serviceView(service), closed: false };
     if ((settings.closedDates || []).includes(date)) return { date, timezone, slots: [], service: this.serviceView(service), closed: true };
 
     const allProviders = await this.providers.find({
@@ -124,9 +124,9 @@ export class AvailabilityService {
     };
   }
 
-  async assertSlot(businessId: string, serviceId: string, startAt: Date, providerId: string, timezone: string, durationOverride?: number) {
+  async assertSlot(businessId: string, serviceId: string, startAt: Date, providerId: string, timezone: string, durationOverride?: number, options?: { ignoreWindow?: boolean }) {
     const date = localDateKey(startAt, timezone);
-    const result = await this.forService(businessId, serviceId, date, providerId, durationOverride);
+    const result = await this.forService(businessId, serviceId, date, providerId, durationOverride, options);
     const match = result.slots.find((s) => Math.abs(new Date(s.startAt).getTime() - startAt.getTime()) < 60000);
     if (!match) throw new BadRequestException('That time is no longer available. Please choose another slot.');
     return match;

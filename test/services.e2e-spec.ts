@@ -112,9 +112,30 @@ describe('Service menu and bookings (e2e)', () => {
     const lookup = await http.get(`/api/v1/public/bookings/${tokenValue}`);
     expect(lookup.status).toBe(200);
     expect(lookup.body.data.booking.bookingNumber).toContain('BKG');
+    const calendar = await http.get(`/api/v1/public/bookings/${tokenValue}/calendar.ics`);
+    expect(calendar.status).toBe(200);
+    expect(calendar.text).toContain('BEGIN:VCALENDAR');
+    expect(calendar.text).toContain('SUMMARY:');
     const cancelled = await http.post(`/api/v1/public/bookings/${tokenValue}/cancel`).send({ reason: 'Plans changed' });
     expect(cancelled.status).toBe(201);
     expect(cancelled.body.data.cancelled).toBe(true);
+  });
+
+  it('creates a weekly recurring series', async () => {
+    const date = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Lagos' }).format(new Date(Date.now() + 5 * 86400000));
+    const availability = await http.get(`/api/v1/storefront/${slug}/availability?serviceId=${serviceId}&date=${date}`);
+    const slot = availability.body.data.slots[0];
+    expect(slot).toBeTruthy();
+    const created = await http.post('/api/v1/bookings/recurring').set(base()).send({
+      serviceId, providerId, startAt: slot.startAt, customerName: 'Repeat Client',
+      customerPhone: '08055550123', customerEmail: `repeat-${run}@ojaly.org`,
+      frequency: 'weekly', occurrences: 3,
+    });
+    expect(created.status).toBe(201);
+    expect(created.body.data.bookings).toHaveLength(3);
+    expect(created.body.data.seriesId).toBeTruthy();
+    expect(created.body.data.bookings[1].seriesIndex).toBe(1);
+    expect(created.body.data.bookings[2].seriesTotal).toBe(3);
   });
 
   it('completes an appointment into a sale and receipt', async () => {

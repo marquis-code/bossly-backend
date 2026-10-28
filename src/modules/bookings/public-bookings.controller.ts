@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Res } from '@nestjs/common';
+import type { Response } from 'express';
 import { ApiTags } from '@nestjs/swagger';
 import { Public } from '../../common/decorators/public.decorator';
 import { BookingsService } from './bookings.service';
@@ -13,6 +14,16 @@ export class PublicBookingsController {
   @Get(':token')
   byToken(@Param('token') token: string) {
     return this.bookings.byToken(token);
+  }
+
+  @Get(':token/calendar.ics')
+  async calendar(@Param('token') token: string, @Res() res: Response) {
+    const file = await this.bookings.calendar(token);
+    res.set({
+      'Content-Type': 'text/calendar; charset=utf-8',
+      'Content-Disposition': `attachment; filename="${file.filename}"`,
+      'Cache-Control': 'no-store',
+    }).send(file.content);
   }
 
   @Post(':token/cancel')

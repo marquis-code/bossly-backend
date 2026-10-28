@@ -54,6 +54,19 @@ export class CreateBookingDto {
 
 export class CreatePublicBookingDto extends CreateBookingDto {}
 
+export class CreateRecurringBookingDto extends CreateBookingDto {
+  @ApiProperty({ enum: ['weekly', 'biweekly', 'monthly'] })
+  @IsIn(['weekly', 'biweekly', 'monthly'])
+  frequency: 'weekly' | 'biweekly' | 'monthly';
+
+  @ApiProperty({ minimum: 2, maximum: 12, example: 4 })
+  @Type(() => Number)
+  @IsInt()
+  @Min(2)
+  @Max(12)
+  occurrences: number;
+}
+
 export class RescheduleBookingDto {
   @ApiProperty({ example: '2026-11-03T12:00:00.000Z' })
   @IsISO8601()

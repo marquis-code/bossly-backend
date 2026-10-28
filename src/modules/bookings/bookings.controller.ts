@@ -7,7 +7,7 @@ import { BookingsService } from './bookings.service';
 import { AvailabilityService } from './availability.service';
 import {
   AvailabilityQueryDto, BookingQueryDto, BookingStatusDto, CancelBookingDto,
-  CreateBookingDto, RescheduleBookingDto,
+  CreateBookingDto, CreateRecurringBookingDto, RescheduleBookingDto,
 } from './booking.dto';
 
 @ApiTags('Bookings')
@@ -45,6 +45,16 @@ export class BookingsController {
     @Body() dto: CreateBookingDto,
   ) {
     return this.bookings.create(user.id, businessId, dto);
+  }
+
+  @Post('recurring')
+  @Permissions(PERMISSIONS.BOOKINGS_WRITE)
+  recurring(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentBusiness() businessId: string,
+    @Body() dto: CreateRecurringBookingDto,
+  ) {
+    return this.bookings.createRecurring(user.id, businessId, dto);
   }
 
   @Patch(':id/status')

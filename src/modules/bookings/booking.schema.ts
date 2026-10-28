@@ -135,6 +135,15 @@ export class Booking {
   @Prop({ type: String, enum: ['unpaid', 'deposit_paid', 'paid', 'refunded'], default: 'unpaid', index: true })
   paymentStatus: BookingPaymentStatus;
 
+  @Prop({ type: String, default: null, index: true })
+  seriesId: string | null;
+
+  @Prop({ type: Number, default: 0 })
+  seriesIndex: number;
+
+  @Prop({ type: Number, default: 1 })
+  seriesTotal: number;
+
   @Prop({ type: String, default: null })
   paymentReference: string | null;
 

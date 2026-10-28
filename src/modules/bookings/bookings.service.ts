@@ -20,8 +20,9 @@ import { randomToken } from '../../common/utils/tokens';
 import { normalizeNigerianPhone } from '../../common/utils/phone';
 import { sanitizeText } from '../../common/utils/sanitize';
 import { addMinutes, localDateKey } from './booking.utils';
+import { addDays, addMonths } from 'date-fns';
 import {
-  BookingQueryDto, CancelBookingDto, CreateBookingDto, RescheduleBookingDto,
+  BookingQueryDto, CancelBookingDto, CreateBookingDto, CreateRecurringBookingDto, RescheduleBookingDto,
 } from './booking.dto';
 
 @Injectable()
@@ -92,7 +93,14 @@ export class BookingsService {
     return this.view(booking);
   }
 
-  async create(userId: string, businessId: string, dto: CreateBookingDto, source: 'dashboard' | 'storefront' | 'whatsapp' | 'walk_in' = 'dashboard') {
+  async create(
+    userId: string,
+    businessId: string,
+    dto: CreateBookingDto,
+    source: 'dashboard' | 'storefront' | 'whatsapp' | 'walk_in' = 'dashboard',
+    series?: { id: string; index: number; total: number },
+    notify = true,
+  ) {
     const [business, service] = await Promise.all([
       this.businesses.findById(businessId).lean().exec(),
       this.services.findOne({ _id: dto.serviceId, businessId, isActive: true }).lean().exec(),
@@ -108,7 +116,7 @@ export class BookingsService {
     const addonMinutes = addOns.reduce((sum, a) => sum + (a.durationMinutes || 0), 0);
     const durationMinutes = service.durationMinutes + addonMinutes;
     const timezone = business.timezone || 'Africa/Lagos';
-    await this.availability.assertSlot(businessId, service._id.toString(), startAt, String(provider._id), timezone, durationMinutes);
+    await this.availability.assertSlot(businessId, service._id.toString(), startAt, String(provider._id), timezone, durationMinutes, { ignoreWindow: source !== 'storefront' });
 
     const totalKobo = service.priceKobo + addOns.reduce((sum, a) => sum + a.priceKobo, 0);
     const depositPercent = business.bookingSettings?.depositPercent || 0;
@@ -185,6 +193,9 @@ export class BookingsService {
           depositKobo,
           amountPaidKobo: 0,
           paymentStatus: 'unpaid',
+          seriesId: series?.id || null,
+          seriesIndex: series?.index || 0,
+          seriesTotal: series?.total || 1,
           createdBy: userId,
           history: [{ status: shouldConfirm ? 'confirmed' : 'pending', at: new Date(), by: userId, note: 'Booking created' }],
         }], { session });
@@ -194,7 +205,7 @@ export class BookingsService {
       await session.endSession();
     }
 
-    await this.notifications.create({
+    if (notify) await this.notifications.create({
       businessId,
       type: 'booking',
       title: `New booking · ${created.bookingNumber}`,
@@ -202,12 +213,66 @@ export class BookingsService {
       tone: 'success',
       data: { bookingId: created._id.toString(), startAt: created.startAt.toISOString() },
     });
-    await this.sendConfirmation(created, business as unknown as BusinessDocument).catch(() => undefined);
+    if (notify) await this.sendConfirmation(created, business as unknown as BusinessDocument).catch(() => undefined);
     return this.view(created);
+  }
+
+  async createRecurring(userId: string, businessId: string, dto: CreateRecurringBookingDto) {
+    const seriesId = randomToken(12);
+    const created: { id: string }[] = [];
+    for (let index = 0; index < dto.occurrences; index++) {
+      const base = new Date(dto.startAt);
+      const startAt = index === 0 ? base
+        : dto.frequency === 'monthly' ? addMonths(base, index)
+          : addDays(base, index * (dto.frequency === 'biweekly' ? 14 : 7));
+      try {
+        const booking = await this.create(
+          userId,
+          businessId,
+          { ...dto, startAt: startAt.toISOString() },
+          'dashboard',
+          { id: seriesId, index, total: dto.occurrences },
+          index === 0,
+        );
+        created.push(booking);
+      } catch (error) {
+        if (created.length) {
+          const ids = created.map((b) => b.id);
+          await this.bookings.updateMany(
+            { _id: { $in: ids }, businessId },
+            { $set: { status: 'cancelled', cancelledAt: new Date(), cancellationReason: 'Recurring series could not be completed' } },
+          ).exec();
+        }
+        throw new BadRequestException(`Could not create session ${index + 1}: ${error instanceof Error ? error.message : 'that time is unavailable.'}`);
+      }
+    }
+    return { seriesId, bookings: created };
   }
 
   async createPublic(businessId: string, dto: CreateBookingDto) {
     return this.create(null as unknown as string, businessId, dto, 'storefront');
+  }
+
+  async calendar(token: string) {
+    const booking = await this.bookings.findOne({ publicToken: token }).lean().exec();
+    if (!booking) throw new NotFoundException('Booking not found.');
+    const business = await this.businesses.findById(booking.businessId).lean().exec();
+    const stamp = (value: Date) => value.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
+    const clean = (value: unknown) => String(value || '').replace(/\\/g, '\\\\').replace(/\r?\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;');
+    const lines = [
+      'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Ojaly//Bookings//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
+      'BEGIN:VEVENT',
+      `UID:${booking.publicToken}@ojaly.org`,
+      `DTSTAMP:${stamp(new Date())}`,
+      `DTSTART:${stamp(booking.startAt)}`,
+      `DTEND:${stamp(booking.endAt)}`,
+      `SUMMARY:${clean(`${booking.serviceName} at ${business?.name || 'Ojaly'}`)}`,
+      `DESCRIPTION:${clean(`With ${booking.providerName}. Reference ${booking.bookingNumber}. Manage: ${this.config.get('appUrl')}/booking/${booking.publicToken}`)}`,
+      `LOCATION:${clean(business?.address || '')}`,
+      'STATUS:CONFIRMED',
+      'END:VEVENT', 'END:VCALENDAR',
+    ];
+    return { filename: `ojaly-${booking.bookingNumber}.ics`, content: `${lines.join('\r\n')}\r\n` };
   }
 
   async byToken(token: string) {
@@ -484,7 +549,7 @@ export class BookingsService {
       await this.mail.send({
         to: booking.customerEmail,
         subject: `Your ${booking.serviceName} appointment at ${business.name}`,
-        html: `<p>Hi ${booking.customerName},</p><p>Your <strong>${booking.serviceName}</strong> appointment with <strong>${booking.providerName}</strong> is booked for <strong>${when}</strong>.</p><p>Reference: ${booking.bookingNumber}</p><p><a href="${this.config.get('appUrl')}/booking/${booking.publicToken}">View or manage your booking</a></p><p>${business.bookingSettings?.policy || ''}</p>`,
+        html: `<p>Hi ${booking.customerName},</p><p>Your <strong>${booking.serviceName}</strong> appointment with <strong>${booking.providerName}</strong> is booked for <strong>${when}</strong>.</p><p>Reference: ${booking.bookingNumber}</p><p><a href="${this.config.get('appUrl')}/booking/${booking.publicToken}">View or manage your booking</a> · <a href="${this.config.get('apiUrl')}/public/bookings/${booking.publicToken}/calendar.ics">Add to calendar</a></p><p>${business.bookingSettings?.policy || ''}</p>`,
         template: 'booking_confirmation',
         businessId: booking.businessId,
       });
@@ -522,6 +587,9 @@ export class BookingsService {
       amountPaidKobo: booking.amountPaidKobo,
       paymentStatus: booking.paymentStatus,
       paymentReference: booking.paymentReference,
+      seriesId: booking.seriesId,
+      seriesIndex: booking.seriesIndex,
+      seriesTotal: booking.seriesTotal,
       saleId: booking.saleId,
       cancellationReason: booking.cancellationReason,
       cancelledAt: booking.cancelledAt,
