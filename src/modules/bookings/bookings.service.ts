@@ -11,6 +11,7 @@ import { Provider, ProviderDocument } from '../providers/provider.schema';
 import { Service, ServiceDocument } from '../services/service.schema';
 import { NotificationsService } from '../notifications/notifications.service';
 import { MailService } from '../mail/mail.service';
+import { SmsService } from '../sms/sms.service';
 import { DebtsService } from '../debts/debts.service';
 import { ReceiptsService } from '../receipts/receipts.service';
 import { WaitlistService } from '../waitlist/waitlist.service';
@@ -46,6 +47,7 @@ export class BookingsService {
     private readonly waitlist: WaitlistService,
     private readonly notifications: NotificationsService,
     private readonly mail: MailService,
+    private readonly sms: SmsService,
     private readonly config: ConfigService,
   ) {}
 
@@ -632,6 +634,12 @@ export class BookingsService {
       tone: 'success',
       data: { bookingId: booking._id.toString(), publicToken: booking.publicToken },
     });
+    if (!booking.customerEmail) {
+      await this.sms.send({
+        to: booking.customerPhone,
+        message: `${business.name}: your ${booking.serviceName} with ${booking.providerName} is booked for ${when}. Ref ${booking.bookingNumber}. Manage: ${this.config.get('appUrl')}/booking/${booking.publicToken}`,
+      }).catch(() => undefined);
+    }
     if (booking.customerEmail) {
       await this.mail.send({
         to: booking.customerEmail,

@@ -12,6 +12,7 @@ import { WhatsappOtp, WhatsappOtpDocument } from './whatsapp-otp.schema';
 import { AuditService } from '../audit/audit.service';
 import { numericOtp, sha256 } from '../../common/utils/tokens';
 import { toWhatsAppNumber } from '../../common/utils/phone';
+import { SmsService } from '../sms/sms.service';
 import type { AuthenticatedUser } from '../../common/types/auth.types';
 
 @ApiTags('WhatsApp')
@@ -21,6 +22,7 @@ export class WhatsappSettingsController {
   constructor(
     private readonly config: ConfigService,
     private readonly client: WhatsappClientService,
+    private readonly sms: SmsService,
     private readonly audit: AuditService,
     @InjectModel(WhatsappContact.name) private readonly contacts: Model<WhatsappContactDocument>,
     @InjectModel(WhatsappOtp.name) private readonly otps: Model<WhatsappOtpDocument>,
@@ -38,6 +40,7 @@ export class WhatsappSettingsController {
     };
     return {
       configured: this.client.isConfigured,
+      sms: { configured: this.sms.isConfigured, provider: this.sms.provider },
       readiness,
       missing: Object.entries(readiness).filter(([, ready]) => !ready).map(([key]) => key),
       platformNumber: this.client.platformNumber,

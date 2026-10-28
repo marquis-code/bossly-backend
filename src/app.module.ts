@@ -23,6 +23,7 @@ import { ProvidersModule } from './modules/providers/providers.module';
 import { BookingsModule } from './modules/bookings/bookings.module';
 import { WaitlistModule } from './modules/waitlist/waitlist.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
+import { SmsModule } from './modules/sms/sms.module';
 import { StockModule } from './modules/stock/stock.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { SalesModule } from './modules/sales/sales.module';
@@ -86,6 +87,7 @@ import { JwtModule } from '@nestjs/jwt';
     BookingsModule,
     WaitlistModule,
     ReviewsModule,
+    SmsModule,
     StockModule,
     CustomersModule,
     DebtsModule,

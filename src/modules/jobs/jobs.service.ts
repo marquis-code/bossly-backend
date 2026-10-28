@@ -18,6 +18,7 @@ import { User, UserDocument } from '../users/user.schema';
 import { Order, OrderDocument } from '../orders/order.schema';
 import { Booking, BookingDocument } from '../bookings/booking.schema';
 import { WhatsappClientService } from '../whatsapp/whatsapp-client.service';
+import { SmsService } from '../sms/sms.service';
 
 @Injectable()
 export class JobsService {
@@ -39,6 +40,7 @@ export class JobsService {
     private readonly mail: MailService,
     private readonly config: ConfigService,
     private readonly whatsapp: WhatsappClientService,
+    private readonly sms: SmsService,
   ) {}
 
   @Cron('*/15 * * * *', { name: 'booking-reminders' })
@@ -68,11 +70,17 @@ export class JobsService {
           }).catch(() => undefined);
         }
         if (booking.customerPhone) {
-          await this.whatsapp.send({
+          const whatsapp = await this.whatsapp.send({
             businessId: booking.businessId,
             phone: booking.customerPhone,
             text: `Reminder: your ${booking.serviceName} with ${booking.providerName} is ${when}. Manage: ${this.config.get('appUrl')}/booking/${booking.publicToken}`,
-          }).catch(() => undefined);
+          }).catch(() => ({ sent: false }));
+          if (!whatsapp.sent && !booking.customerEmail) {
+            await this.sms.send({
+              to: booking.customerPhone,
+              message: `Reminder: ${booking.serviceName} with ${booking.providerName} is ${when}. Ref ${booking.bookingNumber}. ${this.config.get('appUrl')}/booking/${booking.publicToken}`,
+            }).catch(() => undefined);
+          }
         }
         await this.notifications.create({
           businessId: booking.businessId, type: 'booking',

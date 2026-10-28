@@ -6,6 +6,7 @@ import { Service, ServiceDocument } from '../services/service.schema';
 import { MailService } from '../mail/mail.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { WhatsappClientService } from '../whatsapp/whatsapp-client.service';
+import { SmsService } from '../sms/sms.service';
 import { normalizeNigerianPhone } from '../../common/utils/phone';
 import { sanitizeText } from '../../common/utils/sanitize';
 import { CreateWaitlistDto, WaitlistQueryDto } from './waitlist.dto';
@@ -20,6 +21,7 @@ export class WaitlistService {
     private readonly mail: MailService,
     private readonly notifications: NotificationsService,
     private readonly whatsapp: WhatsappClientService,
+    private readonly sms: SmsService,
   ) {}
 
   async join(businessId: string, dto: CreateWaitlistDto) {
@@ -89,11 +91,17 @@ export class WaitlistService {
       }).catch(() => undefined);
     }
     if (entry.customerPhone) {
-      await this.whatsapp.send({
+      const whatsapp = await this.whatsapp.send({
         businessId,
         phone: entry.customerPhone,
         text: `Hi ${entry.customerName}! A spot may have opened for ${entry.serviceName} (${when}). Book: ${link}`,
-      }).catch(() => undefined);
+      }).catch(() => ({ sent: false }));
+      if (!whatsapp.sent && !entry.customerEmail) {
+        await this.sms.send({
+          to: entry.customerPhone,
+          message: `${business?.name || 'Ojaly'}: a spot may have opened for ${entry.serviceName}. Book: ${link}`,
+        }).catch(() => undefined);
+      }
     }
     entry.status = 'notified';
     entry.notifiedAt = new Date();

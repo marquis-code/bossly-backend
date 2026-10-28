@@ -22,6 +22,7 @@ export interface AppConfig {
   };
   resend: { apiKey?: string; from: string; replyTo?: string };
   paystack: { secretKey?: string; publicKey?: string; webhookSecret?: string };
+  sms: { provider: string; apiKey?: string; senderId?: string; baseUrl: string };
   whatsapp: {
     phoneNumberId?: string;
     businessAccountId?: string;
@@ -94,6 +95,12 @@ export default (): AppConfig => {
     secretKey: process.env.PAYSTACK_SECRET_KEY,
     publicKey: process.env.PAYSTACK_PUBLIC_KEY,
     webhookSecret: process.env.PAYSTACK_WEBHOOK_SECRET,
+  },
+  sms: {
+    provider: process.env.SMS_PROVIDER || 'termii',
+    apiKey: process.env.TERMII_API_KEY || '',
+    senderId: process.env.TERMII_SENDER_ID || '',
+    baseUrl: (process.env.TERMII_BASE_URL || 'https://api.ng.termii.com').replace(/\/$/, ''),
   },
   whatsapp: {
     phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID,
