@@ -31,15 +31,25 @@ export class WhatsappSettingsController {
   @Get('status')
   async status(@CurrentBusiness() businessId: string) {
     const contacts = await this.contacts.find({ businessId }).sort({ verifiedAt: -1 }).lean().exec();
-    const readiness = {
-      accessToken: Boolean(this.config.get('whatsapp.accessToken')),
-      phoneNumberId: Boolean(this.config.get('whatsapp.phoneNumberId')),
-      appSecret: Boolean(this.config.get('whatsapp.appSecret')),
-      verifyToken: Boolean(this.config.get('whatsapp.verifyToken')),
-      platformNumber: Boolean(this.config.get('whatsapp.platformNumber')),
-    };
+    const provider = this.client.provider;
+    const readiness = provider === '360dialog'
+      ? {
+          phoneNumberId: Boolean(this.config.get('whatsapp.phoneNumberId')),
+          apiKey: Boolean(this.config.get('whatsapp.d360ApiKey')),
+          appSecret: Boolean(this.config.get('whatsapp.appSecret')),
+          verifyToken: Boolean(this.config.get('whatsapp.verifyToken')),
+          platformNumber: Boolean(this.config.get('whatsapp.platformNumber')),
+        }
+      : {
+          accessToken: Boolean(this.config.get('whatsapp.accessToken')),
+          phoneNumberId: Boolean(this.config.get('whatsapp.phoneNumberId')),
+          appSecret: Boolean(this.config.get('whatsapp.appSecret')),
+          verifyToken: Boolean(this.config.get('whatsapp.verifyToken')),
+          platformNumber: Boolean(this.config.get('whatsapp.platformNumber')),
+        };
     return {
       configured: this.client.isConfigured,
+      provider,
       sms: { configured: this.sms.isConfigured, provider: this.sms.provider },
       readiness,
       missing: Object.entries(readiness).filter(([, ready]) => !ready).map(([key]) => key),

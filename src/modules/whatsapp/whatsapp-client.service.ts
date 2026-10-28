@@ -32,11 +32,14 @@ export class WhatsappClientService {
     @InjectModel(WhatsappMessage.name) private readonly messages: Model<WhatsappMessageDocument>,
   ) {}
 
+  get provider(): string {
+    return this.config.get('whatsapp.provider') || 'cloud';
+  }
+
   get isConfigured(): boolean {
-    return Boolean(
-      this.config.get('whatsapp.accessToken') &&
-        this.config.get('whatsapp.phoneNumberId'),
-    );
+    if (!this.config.get('whatsapp.phoneNumberId')) return false;
+    if (this.provider === '360dialog') return Boolean(this.config.get('whatsapp.d360ApiKey'));
+    return Boolean(this.config.get('whatsapp.accessToken'));
   }
 
   get platformNumber(): string | null {
@@ -95,18 +98,19 @@ export class WhatsappClientService {
         };
 
     try {
-      const response = await fetch(
-        `https://graph.facebook.com/v21.0/${this.config.get('whatsapp.phoneNumberId')}/messages`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${this.config.get('whatsapp.accessToken')}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload),
-          signal: AbortSignal.timeout(15000),
-        },
-      );
+      const is360 = this.provider === '360dialog';
+      const url = is360
+        ? `${this.config.get('whatsapp.d360BaseUrl')}/messages`
+        : `https://graph.facebook.com/v21.0/${this.config.get('whatsapp.phoneNumberId')}/messages`;
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (is360) headers['D360-API-KEY'] = String(this.config.get('whatsapp.d360ApiKey'));
+      else headers.Authorization = `Bearer ${this.config.get('whatsapp.accessToken')}`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(15000),
+      });
       const data = (await response.json().catch(() => ({}))) as {
         messages?: { id: string }[];
         error?: { message?: string };

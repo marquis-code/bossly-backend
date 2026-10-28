@@ -24,12 +24,15 @@ export interface AppConfig {
   paystack: { secretKey?: string; publicKey?: string; webhookSecret?: string };
   sms: { provider: string; apiKey?: string; senderId?: string; baseUrl: string };
   whatsapp: {
+    provider?: string;
     phoneNumberId?: string;
     businessAccountId?: string;
     accessToken?: string;
     verifyToken: string;
     appSecret?: string;
     platformNumber?: string;
+    d360ApiKey?: string;
+    d360BaseUrl?: string;
   };
   llm: { apiKey?: string; baseUrl: string; model: string };
   seed: { email?: string; password?: string };
@@ -109,6 +112,9 @@ export default (): AppConfig => {
     verifyToken: process.env.WHATSAPP_VERIFY_TOKEN || 'ojaly-webhook-verify',
     appSecret: process.env.WHATSAPP_APP_SECRET,
     platformNumber: process.env.WHATSAPP_PLATFORM_NUMBER,
+    provider: process.env.WHATSAPP_PROVIDER || 'cloud',
+    d360ApiKey: process.env.WHATSAPP_360DIALOG_API_KEY,
+    d360BaseUrl: (process.env.WHATSAPP_360DIALOG_BASE_URL || 'https://waba-v2.360dialog.io').replace(/\/$/, ''),
   },
   llm: {
     apiKey: process.env.LLM_API_KEY,
