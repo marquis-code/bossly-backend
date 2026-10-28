@@ -26,7 +26,7 @@ describe('WhatsApp Cloud API client', () => {
     const ctx = setup({ lastInboundAt: new Date(Date.now() - 60_000) });
     const fetchMock = jest.fn(async () => ({ ok: true, json: async () => ({ messages: [{ id: 'wamid.1' }] }) }));
     global.fetch = fetchMock as never;
-    const result = await ctx.service.send({ businessId: 'biz', phone: '08031234567', text: 'Receipt: https://ojaly.ng/receipt/x' });
+    const result = await ctx.service.send({ businessId: 'biz', phone: '08031234567', text: 'Receipt: https://ojaly.org/receipt/x' });
     expect(result).toEqual({ sent: true, usedTemplate: false });
     const body = JSON.parse((fetchMock.mock.calls[0] as unknown as [string, { body: string }])[1].body);
     expect(body.type).toBe('text');

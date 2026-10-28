@@ -36,10 +36,10 @@ export interface AppConfig {
 
 export default (): AppConfig => {
   const isProd = (process.env.NODE_ENV || 'development') === 'production';
-  const defaultAppUrl = isProd ? 'https://ojaly.ng' : 'http://localhost:3100';
-  const defaultAdminUrl = isProd ? 'https://admin.ojaly.ng' : 'http://localhost:3101';
+  const defaultAppUrl = isProd ? 'https://ojaly.org' : 'http://localhost:3100';
+  const defaultAdminUrl = isProd ? 'https://admin.ojaly.org' : 'http://localhost:3101';
   const defaultApiUrl = isProd
-    ? (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}/api/v1` : 'https://api.ojaly.ng/api/v1')
+    ? (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}/api/v1` : 'https://api.ojaly.org/api/v1')
     : 'http://localhost:4100/api/v1';
   const defaultOrigins = isProd
     ? `${defaultAppUrl},${defaultAdminUrl},https://*.vercel.app,https://*.railway.app,https://*.onrender.com,http://localhost:3100,http://localhost:3101`
@@ -51,7 +51,7 @@ export default (): AppConfig => {
     appUrl: process.env.APP_URL || defaultAppUrl,
     adminUrl: process.env.ADMIN_URL || defaultAdminUrl,
     apiUrl: process.env.API_URL || defaultApiUrl,
-    publicRootDomain: process.env.PUBLIC_ROOT_DOMAIN || 'ojaly.ng',
+    publicRootDomain: process.env.PUBLIC_ROOT_DOMAIN || 'ojaly.org',
     allowedOrigins: (process.env.ALLOWED_ORIGINS || defaultOrigins)
       .split(',').map((s) => s.trim()).filter(Boolean),
     mongodbUri: (process.env.MONGODB_URI || 'mongodb://localhost:27018/ojaly?directConnection=true') as string,
@@ -70,8 +70,8 @@ export default (): AppConfig => {
   },
   resend: {
     apiKey: process.env.RESEND_API_KEY,
-    from: process.env.MAIL_FROM || 'Ojaly <hello@ojaly.ng>',
-    replyTo: process.env.MAIL_REPLY_TO || 'hello@ojaly.ng',
+    from: process.env.MAIL_FROM || 'Ojaly <hello@ojaly.org>',
+    replyTo: process.env.MAIL_REPLY_TO || 'hello@ojaly.org',
   },
   paystack: {
     secretKey: process.env.PAYSTACK_SECRET_KEY,

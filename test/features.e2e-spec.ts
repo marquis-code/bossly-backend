@@ -42,7 +42,7 @@ describe('Affiliates, admin tooling and impersonation (e2e)', () => {
       JWT_REFRESH_TTL: '30d',
       APP_URL: 'http://localhost:3100',
       API_URL: 'http://localhost:4100/api/v1',
-      PUBLIC_ROOT_DOMAIN: 'ojaly.ng',
+      PUBLIC_ROOT_DOMAIN: 'ojaly.org',
       ALLOWED_ORIGINS: 'http://localhost:3100',
       PAYSTACK_SECRET_KEY: 'sk_test_features',
       PAYSTACK_WEBHOOK_SECRET: paystackSecret,

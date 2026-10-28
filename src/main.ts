@@ -18,7 +18,7 @@ async function bootstrap(): Promise<void> {
   });
   const config = app.get(ConfigService);
   const allowed = config.get<string[]>('allowedOrigins') || [];
-  const rootDomain = config.get<string>('publicRootDomain') || 'ojaly.ng';
+  const rootDomain = config.get<string>('publicRootDomain') || 'ojaly.org';
   const businessModel = app.get<Model<BusinessDocument>>(getModelToken(Business.name));
   const customDomainCache = new Map<string, { allowed: boolean; expires: number }>();
   const matchesAllowedOrigin = (origin: string) => allowed.some((pattern) => {

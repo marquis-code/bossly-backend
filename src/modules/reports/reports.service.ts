@@ -215,7 +215,7 @@ export class ReportsService {
         y += 17;
       }
 
-      doc.fillColor(muted).font('Helvetica').fontSize(8).text('Made with Ojaly · ojaly.ng', 48, 790, { width: 500, align: 'center' });
+      doc.fillColor(muted).font('Helvetica').fontSize(8).text('Made with Ojaly · ojaly.org', 48, 790, { width: 500, align: 'center' });
       doc.end();
     });
   }

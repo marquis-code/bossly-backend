@@ -123,7 +123,7 @@ export function emailLayout(opts: EmailLayoutOptions): string {
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
               <tr>
                 <td>
-                  <a href="https://ojaly.ng" target="_blank" style="text-decoration:none;display:inline-flex;align-items:center;">
+                  <a href="https://ojaly.org" target="_blank" style="text-decoration:none;display:inline-flex;align-items:center;">
                     <table role="presentation" cellpadding="0" cellspacing="0">
                       <tr>
                         <td style="background-color:${BRAND.orange};width:14px;height:14px;border-radius:4px;vertical-align:middle;"></td>

@@ -31,7 +31,7 @@ async function seed(): Promise<void> {
 
   await plans.ensureDefaults();
 
-  const adminEmail = (config.get<string>('seed.email') || 'admin@ojaly.ng').toLowerCase();
+  const adminEmail = (config.get<string>('seed.email') || 'admin@ojaly.org').toLowerCase();
   const adminPassword = config.get<string>('seed.password') || 'ChangeMe123!';
   let admin = await users.findOne({ email: adminEmail }).exec();
   if (!admin) {
@@ -62,7 +62,7 @@ async function seed(): Promise<void> {
   }
   const demoEnabled = process.env.SEED_DEMO === 'true' || (process.env.SEED_DEMO !== 'false' && !isProduction);
   if (demoEnabled) {
-    const demoEmail = 'demo@ojaly.ng';
+    const demoEmail = 'demo@ojaly.org';
     const existing = await businesses.findOne({ email: demoEmail }).lean().exec();
     if (existing) {
       console.log(`• Demo business already exists: /s/${existing.slug}`);

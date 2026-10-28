@@ -354,7 +354,7 @@ export class ReceiptsService {
 
       doc.fillColor(muted).font('Helvetica-Oblique').fontSize(9).text(data.note, 48, 740, { width });
       doc.moveTo(48, 770).lineTo(547, 770).strokeColor('#EDE7DB').stroke();
-      doc.fillColor(muted).font('Helvetica').fontSize(8).text('Made with Ojaly · ojaly.ng · This document was generated automatically.', 48, 780, { width, align: 'center' });
+      doc.fillColor(muted).font('Helvetica').fontSize(8).text('Made with Ojaly · ojaly.org · This document was generated automatically.', 48, 780, { width, align: 'center' });
       doc.end();
     });
   }

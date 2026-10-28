@@ -40,7 +40,7 @@ describe('Ojaly API (e2e)', () => {
       JWT_REFRESH_TTL: '30d',
       APP_URL: 'http://localhost:3100',
       API_URL: 'http://localhost:4100/api/v1',
-      PUBLIC_ROOT_DOMAIN: 'ojaly.ng',
+      PUBLIC_ROOT_DOMAIN: 'ojaly.org',
       ALLOWED_ORIGINS: 'http://localhost:3100',
       PAYSTACK_SECRET_KEY: 'sk_test_ojaly_e2e',
       PAYSTACK_WEBHOOK_SECRET: paystackWebhookSecret,
