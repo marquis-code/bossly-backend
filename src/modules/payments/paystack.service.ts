@@ -100,6 +100,27 @@ export class PaystackService {
     return data.data || null;
   }
 
+  async refund(reference: string, amountKobo?: number): Promise<{ status: boolean; message: string; data?: Record<string, unknown> }> {
+    if (!this.isConfigured) throw new ServiceUnavailableException('Payments are not configured yet.');
+    const body: Record<string, unknown> = { transaction: reference };
+    if (amountKobo) body.amount = amountKobo;
+    const response = await fetch('https://api.paystack.co/refund', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${this.config.get('paystack.secretKey')}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(20000),
+    });
+    const data = (await response.json().catch(() => ({}))) as { status: boolean; message: string; data?: Record<string, unknown> };
+    if (!response.ok || !data.status) {
+      this.logger.error(`Paystack refund failed: ${data.message || response.status}`);
+      throw new BadGatewayException(data.message || 'Paystack could not process this refund.');
+    }
+    return data;
+  }
+
   get webhookSecret(): string | null {
     return this.config.get('paystack.webhookSecret') || this.config.get('paystack.secretKey') || null;
   }

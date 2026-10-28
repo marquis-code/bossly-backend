@@ -4,10 +4,11 @@ import { CurrentBusiness, CurrentUser, Permissions } from '../../common/decorato
 import { PERMISSIONS } from '../../common/constants/permissions';
 import type { AuthenticatedUser } from '../../common/types/auth.types';
 import { BookingsService } from './bookings.service';
+import { PaymentsService } from '../payments/payments.service';
 import { AvailabilityService } from './availability.service';
 import {
   AvailabilityQueryDto, BookingQueryDto, BookingStatusDto, CancelBookingDto,
-  CreateBookingDto, CreateRecurringBookingDto, RescheduleBookingDto,
+  CreateBookingDto, CreateRecurringBookingDto, RefundBookingDto, RescheduleBookingDto,
 } from './booking.dto';
 
 @ApiTags('Bookings')
@@ -17,12 +18,19 @@ export class BookingsController {
   constructor(
     private readonly bookings: BookingsService,
     private readonly availability: AvailabilityService,
+    private readonly payments: PaymentsService,
   ) {}
 
   @Get()
   @Permissions(PERMISSIONS.BOOKINGS_READ)
   list(@CurrentBusiness() businessId: string, @Query() query: BookingQueryDto) {
     return this.bookings.list(businessId, query);
+  }
+
+  @Get('calendar-feed')
+  @Permissions(PERMISSIONS.BOOKINGS_READ)
+  calendarFeed(@CurrentBusiness() businessId: string) {
+    return this.bookings.calendarFeedLink(businessId);
   }
 
   @Get('availability')
@@ -66,6 +74,16 @@ export class BookingsController {
     @Body() dto: BookingStatusDto,
   ) {
     return this.bookings.updateStatus(user.id, businessId, id, dto.status, dto.reason);
+  }
+
+  @Post(':id/refund')
+  @Permissions(PERMISSIONS.BOOKINGS_WRITE)
+  refund(
+    @CurrentBusiness() businessId: string,
+    @Param('id') id: string,
+    @Body() dto: RefundBookingDto,
+  ) {
+    return this.payments.refundBooking(businessId, id, dto.amountKobo);
   }
 
   @Post(':id/cancel')

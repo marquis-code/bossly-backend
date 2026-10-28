@@ -132,6 +132,9 @@ export class Booking {
   @Prop({ type: Number, default: 0 })
   amountPaidKobo: number;
 
+  @Prop({ type: Number, default: 0 })
+  refundedKobo: number;
+
   @Prop({ type: String, enum: ['unpaid', 'deposit_paid', 'paid', 'refunded'], default: 'unpaid', index: true })
   paymentStatus: BookingPaymentStatus;
 
@@ -166,6 +169,12 @@ export class Booking {
   confirmationSentAt: Date | null;
 
   @Prop({ type: String, default: null })
+  reviewToken: string | null;
+
+  @Prop({ type: Date, default: null })
+  reviewedAt: Date | null;
+
+  @Prop({ type: String, default: null })
   createdBy: string | null;
 
   @Prop({ type: [BookingHistorySchema], default: [] })
@@ -178,3 +187,4 @@ BookingSchema.index({ businessId: 1, status: 1, startAt: 1 });
 BookingSchema.index({ businessId: 1, providerId: 1, blockStartAt: 1, blockEndAt: 1 });
 BookingSchema.index({ businessId: 1, customerPhone: 1, startAt: -1 });
 BookingSchema.index({ businessId: 1, bookingNumber: 1 }, { unique: true });
+BookingSchema.index({ reviewToken: 1 }, { unique: true, partialFilterExpression: { reviewToken: { $type: 'string' } } });

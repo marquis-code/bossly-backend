@@ -169,5 +169,15 @@ describe('Service menu and bookings (e2e)', () => {
     expect(completed.status).toBe(200);
     expect(completed.body.data.status).toBe('completed');
     expect(completed.body.data.saleId).toBeTruthy();
+    expect(completed.body.data.reviewToken).toBeTruthy();
+    const reviewContext = await http.get(`/api/v1/public/reviews/${completed.body.data.reviewToken}`);
+    expect(reviewContext.status).toBe(200);
+    expect(reviewContext.body.data.canReview).toBe(true);
+    const review = await http.post(`/api/v1/public/reviews/${completed.body.data.reviewToken}`).send({ rating: 5, comment: 'Beautiful work and right on time.' });
+    expect(review.status).toBe(201);
+    expect(review.body.data.rating).toBe(5);
+    const reviewList = await http.get('/api/v1/reviews').set(base());
+    expect(reviewList.status).toBe(200);
+    expect(reviewList.body.data.items.some((r: { bookingId: string }) => r.bookingId === id)).toBe(true);
   });
 });

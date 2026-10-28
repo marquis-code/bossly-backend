@@ -255,6 +255,45 @@ export class BookingsService {
     return this.create(null as unknown as string, businessId, dto, 'storefront');
   }
 
+  async calendarFeedLink(businessId: string) {
+    const business = await this.businesses.findById(businessId).exec();
+    if (!business) throw new NotFoundException('Business not found.');
+    if (!business.calendarToken) {
+      business.calendarToken = randomToken(20);
+      await business.save();
+    }
+    return { url: `${this.config.get('apiUrl')}/public/bookings/calendar/${business.calendarToken}.ics` };
+  }
+
+  async businessCalendar(token: string) {
+    const business = await this.businesses.findOne({ calendarToken: token }).lean().exec();
+    if (!business) throw new NotFoundException('Calendar feed not found.');
+    const bookings = await this.bookings.find({
+      businessId: business._id.toString(), status: { $in: ['pending', 'confirmed'] },
+      startAt: { $gte: new Date(Date.now() - 30 * 86400000) },
+    }).sort({ startAt: 1 }).limit(500).lean().exec();
+    const stamp = (value: Date) => value.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
+    const clean = (value: unknown) => String(value || '').replace(/\\/g, '\\\\').replace(/\r?\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;');
+    const events = bookings.flatMap((booking) => [
+      'BEGIN:VEVENT',
+      `UID:${booking.publicToken}@ojaly.org`,
+      `DTSTAMP:${stamp(new Date())}`,
+      `DTSTART:${stamp(booking.startAt)}`,
+      `DTEND:${stamp(booking.endAt)}`,
+      `SUMMARY:${clean(`${booking.customerName} · ${booking.serviceName}`)}`,
+      `DESCRIPTION:${clean(`With ${booking.providerName}. Reference ${booking.bookingNumber}. ${booking.notes || ''}`)}`,
+      `LOCATION:${clean(business.address || '')}`,
+      'STATUS:CONFIRMED',
+      'END:VEVENT',
+    ]);
+    const lines = [
+      'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Ojaly//Calendar Feed//EN', 'CALSCALE:GREGORIAN',
+      'METHOD:PUBLISH', `X-WR-CALNAME:${clean(`${business.name} appointments`)}`,
+      ...events, 'END:VCALENDAR',
+    ];
+    return { filename: `ojaly-${business.slug}-calendar.ics`, content: `${lines.join('\r\n')}\r\n` };
+  }
+
   async calendar(token: string) {
     const booking = await this.bookings.findOne({ publicToken: token }).lean().exec();
     if (!booking) throw new NotFoundException('Booking not found.');
@@ -488,6 +527,7 @@ export class BookingsService {
         booking.status = 'completed';
         booking.completedAt = new Date();
         booking.saleId = createdSale._id.toString();
+        if (!booking.reviewToken) booking.reviewToken = randomToken(24);
         booking.history.push({ status: 'completed', at: new Date(), by: userId, note: saleNumber });
         await booking.save({ session });
         await this.businesses.updateOne(
@@ -507,7 +547,28 @@ export class BookingsService {
         this.logger.warn(`Service receipt failed: ${error instanceof Error ? error.message : 'unknown'}`);
       }
     }
+    const businessForReview = await this.businesses.findById(businessId).lean().exec();
+    if (businessForReview) await this.sendReviewRequest(booking, businessForReview as unknown as BusinessDocument).catch(() => undefined);
     return this.view(booking);
+  }
+
+  private async sendReviewRequest(booking: BookingDocument, business: BusinessDocument) {
+    if (!booking.reviewToken) return;
+    const link = `${this.config.get('appUrl')}/review/${booking.reviewToken}`;
+    await this.notifications.create({
+      businessId: booking.businessId, type: 'booking', tone: 'info',
+      title: `Review request ready · ${booking.bookingNumber}`,
+      message: `${booking.customerName} can now review ${booking.serviceName}.`,
+      data: { bookingId: booking._id.toString(), reviewUrl: link },
+    });
+    if (!booking.customerEmail) return;
+    await this.mail.send({
+      to: booking.customerEmail,
+      subject: `How was your ${booking.serviceName}?`,
+      html: `<p>Hi ${booking.customerName},</p><p>Thanks for visiting <strong>${business.name}</strong>. How was your <strong>${booking.serviceName}</strong> with ${booking.providerName}?</p><p><a href="${link}">Leave a quick review</a> — it takes less than a minute.</p><p>${business.bookingSettings?.policy || ''}</p>`,
+      template: 'booking_review_request',
+      businessId: booking.businessId,
+    });
   }
 
   private async resolveProvider(businessId: string, service: ServiceDocument | (Service & { _id: unknown }), providerId?: string) {
@@ -591,11 +652,14 @@ export class BookingsService {
       priceKobo: booking.priceKobo,
       depositKobo: booking.depositKobo,
       amountPaidKobo: booking.amountPaidKobo,
+      refundedKobo: booking.refundedKobo || 0,
       paymentStatus: booking.paymentStatus,
       paymentReference: booking.paymentReference,
       seriesId: booking.seriesId,
       seriesIndex: booking.seriesIndex,
       seriesTotal: booking.seriesTotal,
+      reviewToken: booking.reviewToken,
+      reviewedAt: booking.reviewedAt,
       saleId: booking.saleId,
       cancellationReason: booking.cancellationReason,
       cancelledAt: booking.cancelledAt,

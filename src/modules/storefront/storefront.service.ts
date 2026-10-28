@@ -12,6 +12,7 @@ import { ServicesService } from '../services/services.service';
 import { ProvidersService } from '../providers/providers.service';
 import { BookingsService } from '../bookings/bookings.service';
 import { WaitlistService } from '../waitlist/waitlist.service';
+import { ReviewsService } from '../reviews/reviews.service';
 import { CreateWaitlistDto } from '../waitlist/waitlist.dto';
 import { AvailabilityService } from '../bookings/availability.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -41,6 +42,7 @@ export class StorefrontService {
     private readonly providers: ProvidersService,
     private readonly bookings: BookingsService,
     private readonly waitlist: WaitlistService,
+    private readonly reviews: ReviewsService,
     private readonly availability: AvailabilityService,
     private readonly config: ConfigService,
   ) {}
@@ -79,12 +81,13 @@ export class StorefrontService {
 
   async serviceDetail(slug: string, id: string) {
     const business = await this.requireBusiness({ slug: slug.toLowerCase() });
-    const [service, providers] = await Promise.all([
+    const [service, providers, reviews] = await Promise.all([
       this.services.publicOne(business._id.toString(), id),
       this.providers.publicList(business._id.toString()),
+      this.reviews.publishedForBusiness(business._id.toString(), id),
     ]);
     const eligible = providers.filter((p) => !service.providerIds?.length || service.providerIds.includes(p.id));
-    return { business: this.publicBusiness(business), template: getTemplate(business.templateKey), service, providers: eligible };
+    return { business: this.publicBusiness(business), template: getTemplate(business.templateKey), service, providers: eligible, reviews };
   }
 
   async availabilityForService(slug: string, query: { serviceId: string; date: string; providerId?: string; durationMinutes?: number }) {

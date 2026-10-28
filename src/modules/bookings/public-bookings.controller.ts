@@ -11,6 +11,16 @@ import { CancelBookingDto, RescheduleBookingDto } from './booking.dto';
 export class PublicBookingsController {
   constructor(private readonly bookings: BookingsService) {}
 
+  @Get('calendar/:token.ics')
+  async calendarFeed(@Param('token') token: string, @Res() res: Response) {
+    const file = await this.bookings.businessCalendar(token.replace(/\.ics$/, ''));
+    res.set({
+      'Content-Type': 'text/calendar; charset=utf-8',
+      'Content-Disposition': `attachment; filename="${file.filename}"`,
+      'Cache-Control': 'no-store',
+    }).send(file.content);
+  }
+
   @Get(':token')
   byToken(@Param('token') token: string) {
     return this.bookings.byToken(token);

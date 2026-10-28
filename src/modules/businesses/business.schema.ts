@@ -165,6 +165,9 @@ export class Business {
   @Prop({ type: String, default: null })
   customDomain: string | null;
 
+  @Prop({ type: String, default: null })
+  calendarToken: string | null;
+
   @Prop({ type: Boolean, default: false })
   customDomainVerified: boolean;
 

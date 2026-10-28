@@ -78,6 +78,15 @@ export class RescheduleBookingDto {
   providerId?: string;
 }
 
+export class RefundBookingDto {
+  @ApiPropertyOptional({ description: 'Amount in kobo. Omit for the full refundable balance.' })
+  @Type(() => Number)
+  @IsInt()
+  @Min(100)
+  @IsOptional()
+  amountKobo?: number;
+}
+
 export class CancelBookingDto {
   @ApiPropertyOptional()
   @IsString()

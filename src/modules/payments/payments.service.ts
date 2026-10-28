@@ -185,6 +185,27 @@ export class PaymentsService {
     return { reference, authorizationUrl: initialized.authorizationUrl, amountKobo, publicKey: this.paystack.publicKey };
   }
 
+  async refundBooking(businessId: string, bookingId: string, amountKobo?: number) {
+    const booking = await this.bookings.findOne({ _id: bookingId, businessId }).exec();
+    if (!booking) throw new NotFoundException('Booking not found.');
+    if (booking.status === 'completed') throw new BadRequestException('A completed appointment has already been settled as a sale. Refund the sale instead.');
+    const paid = booking.amountPaidKobo - (booking.refundedKobo || 0);
+    if (paid <= 0) throw new BadRequestException('There is no refundable payment on this booking.');
+    const amount = amountKobo ? Math.min(amountKobo, paid) : paid;
+    if (amount < 100) throw new BadRequestException('The refund amount must be at least ₦1.');
+    const payment = await this.payments.findOne({
+      businessId, bookingId, purpose: 'booking', status: 'success',
+    }).sort({ createdAt: -1 }).exec();
+    if (!payment) throw new BadRequestException('No successful payment was found for this booking.');
+    await this.paystack.refund(payment.reference, amount);
+    booking.refundedKobo = (booking.refundedKobo || 0) + amount;
+    booking.paymentStatus = booking.refundedKobo >= booking.amountPaidKobo ? 'refunded' : 'deposit_paid';
+    booking.history.push({ status: 'refund', at: new Date(), by: 'paystack', note: `${amount} kobo refunded` });
+    await booking.save();
+    if (booking.paymentStatus === 'refunded') await this.payments.updateOne({ _id: payment._id }, { $set: { status: 'reversed' } }).exec();
+    return { refunded: true, amountKobo: amount, bookingId: booking._id.toString(), paymentReference: payment.reference };
+  }
+
   async publicBookingDepositLink(token: string, email?: string) {
     const booking = await this.bookings.findOne({ publicToken: token }).lean().exec();
     if (!booking) throw new NotFoundException('Booking not found.');
