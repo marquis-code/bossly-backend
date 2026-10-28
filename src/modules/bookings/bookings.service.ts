@@ -13,6 +13,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { MailService } from '../mail/mail.service';
 import { DebtsService } from '../debts/debts.service';
 import { ReceiptsService } from '../receipts/receipts.service';
+import { WaitlistService } from '../waitlist/waitlist.service';
 import { AvailabilityService } from './availability.service';
 import { Booking, BookingDocument, BookingStatus } from './booking.schema';
 import { nextSequence } from '../../common/utils/order-number';
@@ -42,6 +43,7 @@ export class BookingsService {
     private readonly availability: AvailabilityService,
     private readonly debts: DebtsService,
     private readonly receipts: ReceiptsService,
+    private readonly waitlist: WaitlistService,
     private readonly notifications: NotificationsService,
     private readonly mail: MailService,
     private readonly config: ConfigService,
@@ -308,6 +310,7 @@ export class BookingsService {
     if (status === 'no_show') booking.notes = `${booking.notes}\nNo-show recorded`.trim();
     booking.history.push({ status, at: new Date(), by: userId, note: reason || '' });
     await booking.save();
+    if (status === 'cancelled') await this.waitlist.offerOpening(businessId, booking.serviceId, booking.startAt).catch(() => undefined);
     return this.view(booking);
   }
 
@@ -329,6 +332,7 @@ export class BookingsService {
     booking.cancellationReason = dto.reason || 'Cancelled by customer';
     booking.history.push({ status: 'cancelled', at: new Date(), by: 'customer', note: booking.cancellationReason });
     await booking.save();
+    await this.waitlist.offerOpening(booking.businessId, booking.serviceId, booking.startAt).catch(() => undefined);
     return { cancelled: true, booking: this.view(booking) };
   }
 
@@ -349,6 +353,7 @@ export class BookingsService {
   }
 
   private async applyReschedule(booking: BookingDocument, dto: RescheduleBookingDto, userId: string | null) {
+    const oldStartAt = booking.startAt;
     if (['cancelled', 'completed'].includes(booking.status)) throw new BadRequestException('This booking cannot be rescheduled.');
     const service = await this.services.findOne({ _id: booking.serviceId, businessId: booking.businessId }).lean().exec();
     if (!service) throw new NotFoundException('Service not found.');
@@ -385,6 +390,7 @@ export class BookingsService {
     } finally {
       await session.endSession();
     }
+    await this.waitlist.offerOpening(booking.businessId, booking.serviceId, oldStartAt).catch(() => undefined);
     return this.view(booking);
   }
 

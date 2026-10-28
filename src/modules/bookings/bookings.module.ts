@@ -13,6 +13,7 @@ import { ReceiptsModule } from '../receipts/receipts.module';
 import { Sale, SaleSchema } from '../sales/sale.schema';
 import { Service, ServiceSchema } from '../services/service.schema';
 import { ServicesModule } from '../services/services.module';
+import { WaitlistModule } from '../waitlist/waitlist.module';
 import { Booking, BookingSchema } from './booking.schema';
 import { BookingsController } from './bookings.controller';
 import { BookingsService } from './bookings.service';
@@ -33,6 +34,7 @@ import { AvailabilityService } from './availability.service';
     ]),
     ProvidersModule,
     ServicesModule,
+    WaitlistModule,
     DebtsModule,
     ReceiptsModule,
     NotificationsModule,

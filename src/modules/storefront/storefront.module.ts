@@ -13,6 +13,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { ServicesModule } from '../services/services.module';
 import { ProvidersModule } from '../providers/providers.module';
 import { BookingsModule } from '../bookings/bookings.module';
+import { WaitlistModule } from '../waitlist/waitlist.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { BookingsModule } from '../bookings/bookings.module';
     ServicesModule,
     ProvidersModule,
     BookingsModule,
+    WaitlistModule,
   ],
   controllers: [StorefrontController, StorefrontInboxController],
   providers: [StorefrontService],

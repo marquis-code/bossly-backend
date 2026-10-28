@@ -6,6 +6,7 @@ import { PERMISSIONS } from '../../common/constants/permissions';
 import { StorefrontService } from './storefront.service';
 import { StorefrontContactDto, StorefrontOrderDto, StorefrontProductQueryDto } from './dto/storefront.dto';
 import { AvailabilityQueryDto, CreatePublicBookingDto } from '../bookings/booking.dto';
+import { CreateWaitlistDto } from '../waitlist/waitlist.dto';
 
 @ApiTags('Storefront')
 @Public()
@@ -51,6 +52,11 @@ export class StorefrontController {
   @Get(':slug/availability')
   availability(@Param('slug') slug: string, @Query() query: AvailabilityQueryDto) {
     return this.storefront.availabilityForService(slug, query);
+  }
+
+  @Post(':slug/waitlist')
+  waitlist(@Param('slug') slug: string, @Body() dto: CreateWaitlistDto) {
+    return this.storefront.joinWaitlist(slug, dto);
   }
 
   @Post(':slug/bookings')

@@ -121,6 +121,24 @@ describe('Service menu and bookings (e2e)', () => {
     expect(cancelled.body.data.cancelled).toBe(true);
   });
 
+  it('captures a waitlist request and notifies it', async () => {
+    const from = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Lagos' }).format(new Date(Date.now() + 10 * 86400000));
+    const to = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Lagos' }).format(new Date(Date.now() + 17 * 86400000));
+    const joined = await http.post(`/api/v1/storefront/${slug}/waitlist`).send({
+      serviceId, providerId, customerName: 'Waitlist Client', customerPhone: '08055558888',
+      customerEmail: `waitlist-${run}@ojaly.org`, preferredFrom: from, preferredTo: to,
+    });
+    expect(joined.status).toBe(201);
+    expect(joined.body.data.entry.status).toBe('waiting');
+    const list = await http.get('/api/v1/waitlist').set(base());
+    expect(list.status).toBe(200);
+    expect(list.body.data.some((e: { customerName: string }) => e.customerName === 'Waitlist Client')).toBe(true);
+    const entry = list.body.data.find((e: { customerName: string }) => e.customerName === 'Waitlist Client');
+    const notified = await http.post(`/api/v1/waitlist/${entry.id}/notify`).set(base());
+    expect(notified.status).toBe(201);
+    expect(notified.body.data.status).toBe('notified');
+  });
+
   it('creates a weekly recurring series', async () => {
     const date = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Lagos' }).format(new Date(Date.now() + 5 * 86400000));
     const availability = await http.get(`/api/v1/storefront/${slug}/availability?serviceId=${serviceId}&date=${date}`);

@@ -11,6 +11,8 @@ import { PaymentsService } from '../payments/payments.service';
 import { ServicesService } from '../services/services.service';
 import { ProvidersService } from '../providers/providers.service';
 import { BookingsService } from '../bookings/bookings.service';
+import { WaitlistService } from '../waitlist/waitlist.service';
+import { CreateWaitlistDto } from '../waitlist/waitlist.dto';
 import { AvailabilityService } from '../bookings/availability.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { MailService } from '../mail/mail.service';
@@ -38,6 +40,7 @@ export class StorefrontService {
     private readonly services: ServicesService,
     private readonly providers: ProvidersService,
     private readonly bookings: BookingsService,
+    private readonly waitlist: WaitlistService,
     private readonly availability: AvailabilityService,
     private readonly config: ConfigService,
   ) {}
@@ -87,6 +90,12 @@ export class StorefrontService {
   async availabilityForService(slug: string, query: { serviceId: string; date: string; providerId?: string; durationMinutes?: number }) {
     const business = await this.requireBusiness({ slug: slug.toLowerCase() });
     return this.availability.forService(business._id.toString(), query.serviceId, query.date, query.providerId, query.durationMinutes);
+  }
+
+  async joinWaitlist(slug: string, dto: CreateWaitlistDto) {
+    const business = await this.requireBusiness({ slug: slug.toLowerCase() });
+    const entry = await this.waitlist.join(business._id.toString(), dto);
+    return { entry, business: this.publicBusiness(business) };
   }
 
   async placeBooking(slug: string, dto: CreateBookingDto) {
