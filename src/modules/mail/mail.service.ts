@@ -29,7 +29,20 @@ export class MailService {
     this.config = config;
     const key = config.get<string>('resend.apiKey');
     this.resend = key ? new Resend(key) : null;
-    this.from = config.get<string>('resend.from') || 'Ojaly <hello@ojaly.org>';
+    let configuredFrom = (config.get<string>('resend.from') || 'Ojaly <hello@ojaly.org>').trim();
+    if ((configuredFrom.startsWith('"') && configuredFrom.endsWith('"')) || (configuredFrom.startsWith("'") && configuredFrom.endsWith("'"))) {
+      configuredFrom = configuredFrom.slice(1, -1).trim();
+    }
+    configuredFrom = configuredFrom
+      .replace(/@ojaly\.ng/gi, '@ojaly.org')
+      .replace(/@bossly\.[a-z]+/gi, '@ojaly.org');
+
+    if (!configuredFrom.includes('@ojaly.org')) {
+      configuredFrom = 'Ojaly <hello@ojaly.org>';
+    }
+
+    this.from = configuredFrom;
+    this.logger.log(`MailService ready: sender="${this.from}", resendConfigured=${Boolean(this.resend)}`);
   }
 
   get isConfigured(): boolean {
@@ -43,15 +56,31 @@ export class MailService {
       return { sent: false };
     }
     try {
+      let fromAddress = this.from;
+      if (fromAddress.includes('@ojaly.ng') || fromAddress.includes('@bossly.')) {
+        fromAddress = fromAddress
+          .replace(/@ojaly\.ng/gi, '@ojaly.org')
+          .replace(/@bossly\.[a-z]+/gi, '@ojaly.org');
+      }
+
+      let replyToAddress = (input.replyTo || this.config.get<string>('resend.replyTo') || 'hello@ojaly.org').trim();
+      if ((replyToAddress.startsWith('"') && replyToAddress.endsWith('"')) || (replyToAddress.startsWith("'") && replyToAddress.endsWith("'"))) {
+        replyToAddress = replyToAddress.slice(1, -1).trim();
+      }
+      replyToAddress = replyToAddress
+        .replace(/@ojaly\.ng/gi, '@ojaly.org')
+        .replace(/@bossly\.[a-z]+/gi, '@ojaly.org');
+
       const { data, error } = await this.resend.emails.send({
-        from: this.from,
+        from: fromAddress,
         to: [input.to],
         subject: input.subject,
         html: input.html,
-        replyTo: input.replyTo || this.config.get<string>('resend.replyTo') || undefined,
+        replyTo: replyToAddress || undefined,
       });
       if (error) throw new Error(error.message);
       await this.log(input, 'sent', data?.id ?? null, null);
+      this.logger.log(`Email sent: ${input.template} to ${this.maskEmail(input.to)} [id: ${data?.id}]`);
       return { sent: true, id: data?.id };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown email error';

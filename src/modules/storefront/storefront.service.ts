@@ -8,6 +8,10 @@ import { Membership, MembershipDocument } from '../memberships/membership.schema
 import { User, UserDocument } from '../users/user.schema';
 import { OrdersService } from '../orders/orders.service';
 import { PaymentsService } from '../payments/payments.service';
+import { ServicesService } from '../services/services.service';
+import { ProvidersService } from '../providers/providers.service';
+import { BookingsService } from '../bookings/bookings.service';
+import { AvailabilityService } from '../bookings/availability.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { MailService } from '../mail/mail.service';
 import { StorefrontMessage, StorefrontMessageDocument } from './storefront-message.schema';
@@ -17,6 +21,7 @@ import { normalizeNigerianPhone, waLink } from '../../common/utils/phone';
 import { sanitizeText } from '../../common/utils/sanitize';
 import { formatNaira } from '../../common/utils/money';
 import { StorefrontContactDto, StorefrontOrderDto, StorefrontProductQueryDto } from './dto/storefront.dto';
+import { CreateBookingDto } from '../bookings/booking.dto';
 
 @Injectable()
 export class StorefrontService {
@@ -30,21 +35,82 @@ export class StorefrontService {
     private readonly payments: PaymentsService,
     private readonly notifications: NotificationsService,
     private readonly mail: MailService,
+    private readonly services: ServicesService,
+    private readonly providers: ProvidersService,
+    private readonly bookings: BookingsService,
+    private readonly availability: AvailabilityService,
     private readonly config: ConfigService,
   ) {}
 
   async home(slug: string) {
     const business = await this.requireBusiness({ slug: slug.toLowerCase() });
-    const [products, categories] = await Promise.all([
-      this.products.find({ businessId: business._id.toString(), isActive: true }).sort({ createdAt: -1 }).limit(8).lean().exec(),
-      this.products.distinct('category', { businessId: business._id.toString(), isActive: true }).exec(),
+    const mode = business.businessMode || 'products';
+    const [products, categories, services, providers] = await Promise.all([
+      mode === 'services' ? Promise.resolve([]) : this.products.find({ businessId: business._id.toString(), isActive: true }).sort({ createdAt: -1 }).limit(8).lean().exec(),
+      mode === 'services' ? Promise.resolve([]) : this.products.distinct('category', { businessId: business._id.toString(), isActive: true }).exec(),
+      mode === 'products' ? Promise.resolve([]) : this.services.publicList(business._id.toString()),
+      mode === 'products' ? Promise.resolve([]) : this.providers.publicList(business._id.toString()),
     ]);
     return {
       business: this.publicBusiness(business),
       template: getTemplate(business.templateKey),
       products: products.map((p) => this.publicProduct(p)),
       categories: (categories as string[]).filter(Boolean),
-      productCount: await this.products.countDocuments({ businessId: business._id.toString(), isActive: true }).exec(),
+      productCount: mode === 'services' ? 0 : await this.products.countDocuments({ businessId: business._id.toString(), isActive: true }).exec(),
+      services,
+      serviceCount: services.length,
+      providers,
+      businessMode: mode,
+    };
+  }
+
+  async servicesList(slug: string) {
+    const business = await this.requireBusiness({ slug: slug.toLowerCase() });
+    const [items, providers, categories] = await Promise.all([
+      this.services.publicList(business._id.toString()),
+      this.providers.publicList(business._id.toString()),
+      this.services.categories(business._id.toString()),
+    ]);
+    return { business: this.publicBusiness(business), template: getTemplate(business.templateKey), items, providers, categories };
+  }
+
+  async serviceDetail(slug: string, id: string) {
+    const business = await this.requireBusiness({ slug: slug.toLowerCase() });
+    const [service, providers] = await Promise.all([
+      this.services.publicOne(business._id.toString(), id),
+      this.providers.publicList(business._id.toString()),
+    ]);
+    const eligible = providers.filter((p) => !service.providerIds?.length || service.providerIds.includes(p.id));
+    return { business: this.publicBusiness(business), template: getTemplate(business.templateKey), service, providers: eligible };
+  }
+
+  async availabilityForService(slug: string, query: { serviceId: string; date: string; providerId?: string }) {
+    const business = await this.requireBusiness({ slug: slug.toLowerCase() });
+    return this.availability.forService(business._id.toString(), query.serviceId, query.date, query.providerId);
+  }
+
+  async placeBooking(slug: string, dto: CreateBookingDto) {
+    const business = await this.requireBusiness({ slug: slug.toLowerCase() });
+    const booking = await this.bookings.createPublic(business._id.toString(), dto);
+    const sellerNumber = business.whatsappNumber || business.publicPhone;
+    const when = new Intl.DateTimeFormat('en-NG', {
+      timeZone: booking.timezone, weekday: 'short', day: 'numeric', month: 'short',
+      hour: 'numeric', minute: '2-digit',
+    }).format(new Date(booking.startAt));
+    const message = `Hello ${business.name}! I booked *${booking.serviceName}* with ${booking.providerName} on ${when}.\n\nReference: ${booking.bookingNumber}\nName: ${booking.customerName}\nPhone: ${booking.customerPhone}\n\nManage: ${this.config.get('appUrl')}/booking/${booking.publicToken}`;
+    let payment: { authorizationUrl: string; reference: string; amountKobo: number } | null = null;
+    if (booking.depositKobo > 0 && booking.paymentStatus === 'unpaid') {
+      const email = booking.customerEmail || dto.customerEmail;
+      if (!email) throw new BadRequestException('Add your email to pay the booking deposit.');
+      const link = await this.payments.publicBookingDepositLink(booking.publicToken, email);
+      payment = { authorizationUrl: link.authorizationUrl, reference: link.reference, amountKobo: link.amountKobo };
+    }
+    return {
+      booking,
+      business: this.publicBusiness(business),
+      payment,
+      whatsappUrl: sellerNumber ? waLink(sellerNumber, message) : null,
+      whatsappMessage: message,
     };
   }
 
@@ -206,6 +272,8 @@ export class StorefrontService {
     const b = business as BusinessDocument;
     return {
       id: b._id.toString(),
+      businessMode: b.businessMode || 'products',
+      bookingSettings: b.bookingSettings || null,
       name: b.name,
       slug: b.slug,
       category: b.category,

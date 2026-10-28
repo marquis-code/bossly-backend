@@ -77,8 +77,22 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
     }
 
     // Auto-resolve root domain
-    if (env.PUBLIC_ROOT_DOMAIN === 'localhost' || String(env.PUBLIC_ROOT_DOMAIN || '').endsWith('.localhost')) {
+    if (!env.PUBLIC_ROOT_DOMAIN || env.PUBLIC_ROOT_DOMAIN === 'localhost' || String(env.PUBLIC_ROOT_DOMAIN || '').endsWith('.localhost') || env.PUBLIC_ROOT_DOMAIN === 'ojaly.ng') {
       env.PUBLIC_ROOT_DOMAIN = 'ojaly.org';
+    }
+
+    // Auto-migrate any legacy ojaly.ng URLs to ojaly.org
+    if (env.API_URL && String(env.API_URL).includes('ojaly.ng')) {
+      env.API_URL = String(env.API_URL).replace(/ojaly\.ng/g, 'ojaly.org');
+    }
+    if (env.APP_URL && String(env.APP_URL).includes('ojaly.ng')) {
+      env.APP_URL = String(env.APP_URL).replace(/ojaly\.ng/g, 'ojaly.org');
+    }
+    if (env.ADMIN_URL && String(env.ADMIN_URL).includes('ojaly.ng')) {
+      env.ADMIN_URL = String(env.ADMIN_URL).replace(/ojaly\.ng/g, 'ojaly.org');
+    }
+    if (env.ALLOWED_ORIGINS && String(env.ALLOWED_ORIGINS).includes('ojaly.ng')) {
+      env.ALLOWED_ORIGINS = String(env.ALLOWED_ORIGINS).replace(/ojaly\.ng/g, 'ojaly.org');
     }
 
     // Ensure distinct JWT secrets
@@ -86,15 +100,37 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
       env.JWT_REFRESH_SECRET = `${env.JWT_ACCESS_SECRET || 'ojaly'}-refresh-${Date.now()}`;
     }
 
-    // Ensure environment variables are synchronized into process.env
-    for (const [key, val] of Object.entries(env)) {
-      if (val !== undefined && val !== null) {
-        process.env[key] = String(val);
-      }
-    }
-
     if (String(env.MONGODB_URI || '').includes('localhost') || String(env.MONGODB_URI || '').includes('127.0.0.1')) {
       console.warn('⚠️ [Ojaly Warning] MONGODB_URI is using localhost. For multi-tenant production, ensure an Atlas MongoDB URI is configured in your platform variables.');
+    }
+  }
+
+  // Auto-sanitize MAIL_FROM: strip wrapping quotes and migrate legacy unverified domains to ojaly.org
+  const sanitizeEmailSender = (val?: unknown): string => {
+    let str = String(val || '').trim();
+    if ((str.startsWith('"') && str.endsWith('"')) || (str.startsWith("'") && str.endsWith("'"))) {
+      str = str.slice(1, -1).trim();
+    }
+    str = str.replace(/@ojaly\.ng/gi, '@ojaly.org').replace(/@bossly\.[a-z]+/gi, '@ojaly.org');
+    return str || 'Ojaly <hello@ojaly.org>';
+  };
+
+  const sanitizeReplyTo = (val?: unknown): string => {
+    let str = String(val || '').trim();
+    if ((str.startsWith('"') && str.endsWith('"')) || (str.startsWith("'") && str.endsWith("'"))) {
+      str = str.slice(1, -1).trim();
+    }
+    str = str.replace(/@ojaly\.ng/gi, '@ojaly.org').replace(/@bossly\.[a-z]+/gi, '@ojaly.org');
+    return str || 'hello@ojaly.org';
+  };
+
+  env.MAIL_FROM = sanitizeEmailSender(env.MAIL_FROM || process.env.MAIL_FROM);
+  env.MAIL_REPLY_TO = sanitizeReplyTo(env.MAIL_REPLY_TO || process.env.MAIL_REPLY_TO);
+
+  // Synchronize validated environment variables back to process.env
+  for (const [key, val] of Object.entries(env)) {
+    if (val !== undefined && val !== null) {
+      process.env[key] = String(val);
     }
   }
 

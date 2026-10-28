@@ -13,6 +13,7 @@ import { Membership, MembershipSchema } from '../memberships/membership.schema';
 import { User, UserSchema } from '../users/user.schema';
 import { Subscription, SubscriptionSchema } from '../plans/subscription.schema';
 import { Coupon, CouponSchema } from '../plans/coupon.schema';
+import { Booking, BookingSchema } from '../bookings/booking.schema';
 import { OrdersModule } from '../orders/orders.module';
 import { DebtsModule } from '../debts/debts.module';
 import { AffiliatesModule } from '../affiliates/affiliates.module';
@@ -30,6 +31,7 @@ import { AffiliatesModule } from '../affiliates/affiliates.module';
       { name: User.name, schema: UserSchema },
       { name: Subscription.name, schema: SubscriptionSchema },
       { name: Coupon.name, schema: CouponSchema },
+      { name: Booking.name, schema: BookingSchema },
     ]),
     OrdersModule,
     DebtsModule,

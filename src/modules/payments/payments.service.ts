@@ -21,6 +21,7 @@ import { Membership, MembershipDocument } from '../memberships/membership.schema
 import { User, UserDocument } from '../users/user.schema';
 import { Subscription, SubscriptionDocument } from '../plans/subscription.schema';
 import { Coupon, CouponDocument } from '../plans/coupon.schema';
+import { Booking, BookingDocument } from '../bookings/booking.schema';
 import { PlansService } from '../plans/plans.service';
 import { OrdersService } from '../orders/orders.service';
 import { DebtsService } from '../debts/debts.service';
@@ -59,6 +60,7 @@ export class PaymentsService {
     @InjectModel(User.name) private readonly users: Model<UserDocument>,
     @InjectModel(Subscription.name) private readonly subscriptions: Model<SubscriptionDocument>,
     @InjectModel(Coupon.name) private readonly coupons: Model<CouponDocument>,
+    @InjectModel(Booking.name) private readonly bookings: Model<BookingDocument>,
     @InjectConnection() private readonly connection: Connection,
     private readonly paystack: PaystackService,
     private readonly plans: PlansService,
@@ -154,6 +156,60 @@ export class PaymentsService {
       createdBy: userId,
     });
     return { reference, authorizationUrl: initialized.authorizationUrl, amountKobo: invoice.totalKobo, publicKey: this.paystack.publicKey };
+  }
+
+  async createBookingDepositLink(userId: string, businessId: string, bookingId: string, dto: CreatePaymentLinkDto) {
+    const booking = await this.bookings.findOne({ _id: bookingId, businessId }).lean().exec();
+    if (!booking) throw new NotFoundException('Booking not found.');
+    if (booking.status === 'cancelled') throw new BadRequestException('This booking was cancelled.');
+    const outstanding = Math.max(0, booking.priceKobo - booking.amountPaidKobo);
+    const amountKobo = booking.depositKobo > 0 ? Math.min(booking.depositKobo, outstanding) : outstanding;
+    if (amountKobo < 100) throw new BadRequestException('This booking has no deposit outstanding.');
+    const email = await this.resolveEmail(businessId, dto.email || booking.customerEmail || undefined);
+    const reference = this.reference('bkg');
+    const initialized = await this.paystack.initialize({
+      email,
+      amountKobo,
+      reference,
+      callbackUrl: `${this.config.get('appUrl')}/payment/callback?reference=${reference}`,
+      metadata: { purpose: 'booking', bookingId, businessId, bookingNumber: booking.bookingNumber },
+    });
+    await this.payments.create({
+      reference, businessId, purpose: 'booking', bookingId,
+      amountKobo, email, status: 'pending',
+      authorizationUrl: initialized.authorizationUrl,
+      accessCode: initialized.accessCode,
+      createdBy: userId,
+      metadata: { bookingNumber: booking.bookingNumber, customerName: booking.customerName },
+    });
+    return { reference, authorizationUrl: initialized.authorizationUrl, amountKobo, publicKey: this.paystack.publicKey };
+  }
+
+  async publicBookingDepositLink(token: string, email?: string) {
+    const booking = await this.bookings.findOne({ publicToken: token }).lean().exec();
+    if (!booking) throw new NotFoundException('Booking not found.');
+    if (booking.status === 'cancelled') throw new BadRequestException('This booking was cancelled.');
+    if (booking.amountPaidKobo >= booking.priceKobo) throw new BadRequestException('This booking is already paid.');
+    const amountKobo = booking.depositKobo > 0
+      ? Math.max(100, Math.min(booking.depositKobo - booking.amountPaidKobo, booking.priceKobo - booking.amountPaidKobo))
+      : booking.priceKobo - booking.amountPaidKobo;
+    const resolved = email || booking.customerEmail || (await this.resolveEmail(booking.businessId, undefined));
+    const reference = this.reference('pbkg');
+    const initialized = await this.paystack.initialize({
+      email: resolved,
+      amountKobo,
+      reference,
+      callbackUrl: `${this.config.get('appUrl')}/payment/callback?reference=${reference}`,
+      metadata: { purpose: 'booking', bookingId: booking._id.toString(), businessId: booking.businessId, bookingNumber: booking.bookingNumber },
+    });
+    await this.payments.create({
+      reference, businessId: booking.businessId, purpose: 'booking', bookingId: booking._id.toString(),
+      amountKobo, email: resolved, status: 'pending',
+      authorizationUrl: initialized.authorizationUrl,
+      accessCode: initialized.accessCode,
+      metadata: { public: true, bookingNumber: booking.bookingNumber },
+    });
+    return { reference, authorizationUrl: initialized.authorizationUrl, amountKobo };
   }
 
   async publicDebtLink(token: string, email: string) {
@@ -379,6 +435,10 @@ export class PaymentsService {
       const invoice = await this.invoices.findById(payment.invoiceId).select('publicToken').lean().exec();
       if (invoice?.publicToken) return `${base}/invoice/${invoice.publicToken}?paid=1`;
     }
+    if (payment.purpose === 'booking' && payment.bookingId) {
+      const booking = await this.bookings.findById(payment.bookingId).select('publicToken').lean().exec();
+      if (booking?.publicToken) return `${base}/booking/${booking.publicToken}?paid=1`;
+    }
     return null;
   }
 
@@ -510,6 +570,16 @@ export class PaymentsService {
           { _id: claimed.invoiceId, businessId: claimed.businessId },
           { $set: { status: 'paid', paidAt: new Date(), paymentId: claimed._id.toString() } },
         ).exec();
+      } else if (claimed.purpose === 'booking' && claimed.bookingId) {
+        const booking = await this.bookings.findOne({ _id: claimed.bookingId, businessId: claimed.businessId }).exec();
+        if (!booking) throw new NotFoundException('Booking not found.');
+        if (booking.status === 'cancelled') throw new BadRequestException('This booking was cancelled.');
+        booking.amountPaidKobo = Math.min(booking.priceKobo, booking.amountPaidKobo + claimed.amountKobo);
+        booking.paymentStatus = booking.amountPaidKobo >= booking.priceKobo ? 'paid' : 'deposit_paid';
+        booking.paymentReference = claimed.reference;
+        if (booking.status === 'pending') booking.status = 'confirmed';
+        booking.history.push({ status: 'payment', at: new Date(), by: 'paystack', note: `${claimed.amountKobo} kobo received` });
+        await booking.save();
       } else if (claimed.purpose === 'subscription') {
         const metadata = claimed.metadata || {};
         const planKey = String(metadata.planKey || '');

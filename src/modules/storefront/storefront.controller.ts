@@ -5,6 +5,7 @@ import { CurrentBusiness, Permissions } from '../../common/decorators/auth.decor
 import { PERMISSIONS } from '../../common/constants/permissions';
 import { StorefrontService } from './storefront.service';
 import { StorefrontContactDto, StorefrontOrderDto, StorefrontProductQueryDto } from './dto/storefront.dto';
+import { AvailabilityQueryDto, CreatePublicBookingDto } from '../bookings/booking.dto';
 
 @ApiTags('Storefront')
 @Public()
@@ -35,6 +36,26 @@ export class StorefrontController {
   @Post(':slug/orders')
   order(@Param('slug') slug: string, @Body() dto: StorefrontOrderDto) {
     return this.storefront.placeOrder(slug, dto);
+  }
+
+  @Get(':slug/services')
+  services(@Param('slug') slug: string) {
+    return this.storefront.servicesList(slug);
+  }
+
+  @Get(':slug/services/:id')
+  service(@Param('slug') slug: string, @Param('id') id: string) {
+    return this.storefront.serviceDetail(slug, id);
+  }
+
+  @Get(':slug/availability')
+  availability(@Param('slug') slug: string, @Query() query: AvailabilityQueryDto) {
+    return this.storefront.availabilityForService(slug, query);
+  }
+
+  @Post(':slug/bookings')
+  booking(@Param('slug') slug: string, @Body() dto: CreatePublicBookingDto) {
+    return this.storefront.placeBooking(slug, dto);
   }
 
   @Post(':slug/contact')

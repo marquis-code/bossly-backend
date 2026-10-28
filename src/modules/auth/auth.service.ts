@@ -185,21 +185,23 @@ export class AuthService {
     const verifyUrl = `${this.config.get<string>('appUrl')}/verify-email?token=${verification}`;
     const welcome = welcomeEmail(dto.name, dto.businessName, `${this.config.get<string>('appUrl')}/app`);
     const verificationMail = verificationEmail(dto.name, verifyUrl);
-    void this.mail.send({
-      to: email,
-      subject: welcome.subject,
-      html: welcome.html,
-      template: 'welcome',
-      businessId: business._id.toString(),
-    });
-    void this.mail.send({
+    // Deliver email verification followed by welcome email
+    await this.mail.send({
       to: email,
       subject: verificationMail.subject,
       html: verificationMail.html,
       template: 'email_verification',
       businessId: business._id.toString(),
       metadata: { purpose: 'verify_email' },
-    });
+    }).catch(() => undefined);
+
+    await this.mail.send({
+      to: email,
+      subject: welcome.subject,
+      html: welcome.html,
+      template: 'welcome',
+      businessId: business._id.toString(),
+    }).catch(() => undefined);
 
     await this.audit.record({
       businessId: business._id.toString(),

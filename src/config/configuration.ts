@@ -45,14 +45,31 @@ export default (): AppConfig => {
     ? `${defaultAppUrl},${defaultAdminUrl},https://*.vercel.app,https://*.railway.app,https://*.onrender.com,http://localhost:3100,http://localhost:3101`
     : 'http://localhost:3100,http://localhost:3101';
 
+  const cleanSender = (val?: string, fallback = 'Ojaly <hello@ojaly.org>') => {
+    let str = (val || fallback).trim();
+    if ((str.startsWith('"') && str.endsWith('"')) || (str.startsWith("'") && str.endsWith("'"))) {
+      str = str.slice(1, -1).trim();
+    }
+    return str.replace(/@ojaly\.ng/gi, '@ojaly.org').replace(/@bossly\.[a-z]+/gi, '@ojaly.org') || fallback;
+  };
+
+  const cleanReplyTo = (val?: string, fallback = 'hello@ojaly.org') => {
+    let str = (val || fallback).trim();
+    if ((str.startsWith('"') && str.endsWith('"')) || (str.startsWith("'") && str.endsWith("'"))) {
+      str = str.slice(1, -1).trim();
+    }
+    return str.replace(/@ojaly\.ng/gi, '@ojaly.org').replace(/@bossly\.[a-z]+/gi, '@ojaly.org') || fallback;
+  };
+
   return {
     env: process.env.NODE_ENV || 'development',
     port: Number(process.env.PORT || 4100),
-    appUrl: process.env.APP_URL || defaultAppUrl,
-    adminUrl: process.env.ADMIN_URL || defaultAdminUrl,
-    apiUrl: process.env.API_URL || defaultApiUrl,
-    publicRootDomain: process.env.PUBLIC_ROOT_DOMAIN || 'ojaly.org',
+    appUrl: (process.env.APP_URL || defaultAppUrl).replace(/ojaly\.ng/g, 'ojaly.org'),
+    adminUrl: (process.env.ADMIN_URL || defaultAdminUrl).replace(/ojaly\.ng/g, 'ojaly.org'),
+    apiUrl: (process.env.API_URL || defaultApiUrl).replace(/ojaly\.ng/g, 'ojaly.org'),
+    publicRootDomain: (process.env.PUBLIC_ROOT_DOMAIN || 'ojaly.org').replace(/ojaly\.ng/g, 'ojaly.org'),
     allowedOrigins: (process.env.ALLOWED_ORIGINS || defaultOrigins)
+      .replace(/ojaly\.ng/g, 'ojaly.org')
       .split(',').map((s) => s.trim()).filter(Boolean),
     mongodbUri: (process.env.MONGODB_URI || 'mongodb://localhost:27018/ojaly?directConnection=true') as string,
     redisUrl: process.env.REDIS_URL,
@@ -70,8 +87,8 @@ export default (): AppConfig => {
   },
   resend: {
     apiKey: process.env.RESEND_API_KEY,
-    from: process.env.MAIL_FROM || 'Ojaly <hello@ojaly.org>',
-    replyTo: process.env.MAIL_REPLY_TO || 'hello@ojaly.org',
+    from: cleanSender(process.env.MAIL_FROM),
+    replyTo: cleanReplyTo(process.env.MAIL_REPLY_TO),
   },
   paystack: {
     secretKey: process.env.PAYSTACK_SECRET_KEY,

@@ -146,6 +146,101 @@ export class LookbookItemDto {
   caption?: string;
 }
 
+export class WeeklyHoursDto {
+  @ApiProperty({ minimum: 0, maximum: 6, example: 1 })
+  @IsInt()
+  @Min(0)
+  @Max(6)
+  day: number;
+
+  @ApiProperty()
+  @IsBoolean()
+  isOpen: boolean;
+
+  @ApiProperty({ example: '09:00' })
+  @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, { message: 'Opening time must use HH:MM.' })
+  start: string;
+
+  @ApiProperty({ example: '18:00' })
+  @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, { message: 'Closing time must use HH:MM.' })
+  end: string;
+}
+
+export class BookingSettingsDto {
+  @ApiPropertyOptional()
+  @IsBoolean()
+  @IsOptional()
+  enabled?: boolean;
+
+  @ApiPropertyOptional()
+  @IsBoolean()
+  @IsOptional()
+  autoConfirm?: boolean;
+
+  @ApiPropertyOptional({ minimum: 0, maximum: 10080 })
+  @IsInt()
+  @Min(0)
+  @Max(10080)
+  @IsOptional()
+  leadTimeMinutes?: number;
+
+  @ApiPropertyOptional({ minimum: 1, maximum: 365 })
+  @IsInt()
+  @Min(1)
+  @Max(365)
+  @IsOptional()
+  windowDays?: number;
+
+  @ApiPropertyOptional({ minimum: 5, maximum: 120 })
+  @IsInt()
+  @Min(5)
+  @Max(120)
+  @IsOptional()
+  slotIntervalMinutes?: number;
+
+  @ApiPropertyOptional({ minimum: 0, maximum: 168 })
+  @IsInt()
+  @Min(0)
+  @Max(168)
+  @IsOptional()
+  cancellationWindowHours?: number;
+
+  @ApiPropertyOptional({ minimum: 0, maximum: 100 })
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  @IsOptional()
+  depositPercent?: number;
+
+  @ApiPropertyOptional({ minimum: 0, maximum: 168 })
+  @IsInt()
+  @Min(0)
+  @Max(168)
+  @IsOptional()
+  reminderHoursBefore?: number;
+
+  @ApiPropertyOptional({ type: [WeeklyHoursDto] })
+  @IsArray()
+  @ArrayMaxSize(7)
+  @ValidateNested({ each: true })
+  @Type(() => WeeklyHoursDto)
+  @IsOptional()
+  weeklyHours?: WeeklyHoursDto[];
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsArray()
+  @ArrayMaxSize(60)
+  @IsString({ each: true })
+  @IsOptional()
+  closedDates?: string[];
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  @MaxLength(1000)
+  policy?: string;
+}
+
 export class UpdateBusinessDto {
   @ApiPropertyOptional()
   @Transform(trim)
@@ -159,6 +254,17 @@ export class UpdateBusinessDto {
   @IsIn(BUSINESS_CATEGORY_KEYS as unknown as string[])
   @IsOptional()
   category?: string;
+
+  @ApiPropertyOptional({ enum: ['products', 'services', 'hybrid'] })
+  @IsIn(['products', 'services', 'hybrid'])
+  @IsOptional()
+  businessMode?: 'products' | 'services' | 'hybrid';
+
+  @ApiPropertyOptional()
+  @ValidateNested()
+  @Type(() => BookingSettingsDto)
+  @IsOptional()
+  bookingSettings?: BookingSettingsDto;
 
   @ApiPropertyOptional()
   @Transform(trim)

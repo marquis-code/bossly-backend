@@ -10,6 +10,9 @@ import { User, UserSchema } from '../users/user.schema';
 import { OrdersModule } from '../orders/orders.module';
 import { PaymentsModule } from '../payments/payments.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { ServicesModule } from '../services/services.module';
+import { ProvidersModule } from '../providers/providers.module';
+import { BookingsModule } from '../bookings/bookings.module';
 
 @Module({
   imports: [
@@ -23,6 +26,9 @@ import { NotificationsModule } from '../notifications/notifications.module';
     OrdersModule,
     PaymentsModule,
     NotificationsModule,
+    ServicesModule,
+    ProvidersModule,
+    BookingsModule,
   ],
   controllers: [StorefrontController, StorefrontInboxController],
   providers: [StorefrontService],

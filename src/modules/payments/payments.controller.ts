@@ -109,6 +109,18 @@ export class PaymentsController {
   }
 
   @ApiBearerAuth()
+  @Post('payments/links/booking/:bookingId')
+  @Permissions(PERMISSIONS.PAYMENTS_MANAGE)
+  bookingLink(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentBusiness() businessId: string,
+    @Param('bookingId') bookingId: string,
+    @Body() dto: CreatePaymentLinkDto,
+  ) {
+    return this.payments.createBookingDepositLink(user.id, businessId, bookingId, dto);
+  }
+
+  @ApiBearerAuth()
   @Post('payments/checkout/subscription')
   @Permissions(PERMISSIONS.SETTINGS_MANAGE)
   subscription(
@@ -141,6 +153,12 @@ export class PaymentsController {
   @Post('public/payments/order/:token')
   publicOrderPay(@Param('token') token: string, @Body() dto: PublicInvoicePaymentDto) {
     return this.payments.publicOrderLink(token, dto.email);
+  }
+
+  @Public()
+  @Post('public/payments/booking/:token')
+  publicBookingPay(@Param('token') token: string, @Body() dto: PublicInvoicePaymentDto) {
+    return this.payments.publicBookingDepositLink(token, dto.email);
   }
 
   @Public()

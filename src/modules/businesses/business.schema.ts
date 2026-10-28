@@ -3,6 +3,52 @@ import { HydratedDocument } from 'mongoose';
 import { schemaOptions } from '../../common/schemas/schema-options';
 
 export type BusinessDocument = HydratedDocument<Business>;
+export type BusinessMode = 'products' | 'services' | 'hybrid';
+
+export interface WeeklyHours {
+  day: number;
+  isOpen: boolean;
+  start: string;
+  end: string;
+}
+
+export interface BookingSettings {
+  enabled: boolean;
+  autoConfirm: boolean;
+  leadTimeMinutes: number;
+  windowDays: number;
+  slotIntervalMinutes: number;
+  cancellationWindowHours: number;
+  depositPercent: number;
+  reminderHoursBefore: number;
+  weeklyHours: WeeklyHours[];
+  closedDates: string[];
+  policy: string;
+}
+
+const defaultWeeklyHours: WeeklyHours[] = [
+  { day: 1, isOpen: true, start: '09:00', end: '18:00' },
+  { day: 2, isOpen: true, start: '09:00', end: '18:00' },
+  { day: 3, isOpen: true, start: '09:00', end: '18:00' },
+  { day: 4, isOpen: true, start: '09:00', end: '18:00' },
+  { day: 5, isOpen: true, start: '09:00', end: '18:00' },
+  { day: 6, isOpen: true, start: '09:00', end: '18:00' },
+  { day: 0, isOpen: false, start: '09:00', end: '18:00' },
+];
+
+export const defaultBookingSettings = (): BookingSettings => ({
+  enabled: false,
+  autoConfirm: true,
+  leadTimeMinutes: 120,
+  windowDays: 60,
+  slotIntervalMinutes: 30,
+  cancellationWindowHours: 24,
+  depositPercent: 0,
+  reminderHoursBefore: 24,
+  weeklyHours: defaultWeeklyHours,
+  closedDates: [],
+  policy: 'Please arrive 5 minutes early. Cancellations within 24 hours may lose the deposit.',
+});
 
 export interface SocialLinks {
   instagram?: string;
@@ -40,6 +86,12 @@ export class Business {
 
   @Prop({ type: String, default: 'other' })
   category: string;
+
+  @Prop({ type: String, enum: ['products', 'services', 'hybrid'], default: 'products', index: true })
+  businessMode: BusinessMode;
+
+  @Prop({ type: Object, default: () => defaultBookingSettings() })
+  bookingSettings: BookingSettings;
 
   @Prop({ type: String, default: '' })
   description: string;
@@ -173,3 +225,4 @@ export const BusinessSchema = SchemaFactory.createForClass(Business);
 BusinessSchema.index({ createdAt: -1 });
 BusinessSchema.index({ storefrontPublished: 1, slug: 1 });
 BusinessSchema.index({ customDomain: 1 }, { sparse: true });
+BusinessSchema.index({ businessMode: 1, storefrontPublished: 1 });

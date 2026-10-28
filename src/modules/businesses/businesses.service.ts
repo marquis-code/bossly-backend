@@ -99,7 +99,7 @@ export class BusinessesService {
     const business = await this.findById(businessId);
     const update: Record<string, unknown> = {};
     const allowed = [
-      'name', 'category', 'description', 'logoUrl', 'bannerUrl', 'heroVideoUrl', 'storyImageUrl', 'lookbookTitle', 'lookbook', 'tagline',
+      'name', 'category', 'businessMode', 'description', 'logoUrl', 'bannerUrl', 'heroVideoUrl', 'storyImageUrl', 'lookbookTitle', 'lookbook', 'tagline',
       'brandColor', 'templateKey', 'sections', 'socialLinks', 'publicPhone',
       'whatsappNumber', 'email', 'address', 'about', 'seoTitle', 'seoDescription',
     ] as const;
@@ -117,6 +117,19 @@ export class BusinessesService {
       update.publicPhone = phone;
     }
     if (dto.templateKey) await this.plans.assertTemplate(businessId, dto.templateKey);
+    if (dto.bookingSettings) {
+      const current = business.bookingSettings || {
+        enabled: false, autoConfirm: true, leadTimeMinutes: 120, windowDays: 60,
+        slotIntervalMinutes: 30, cancellationWindowHours: 24, depositPercent: 0,
+        reminderHoursBefore: 24, weeklyHours: [], closedDates: [], policy: '',
+      };
+      update.bookingSettings = {
+        ...current,
+        ...dto.bookingSettings,
+        weeklyHours: dto.bookingSettings.weeklyHours ?? current.weeklyHours,
+        closedDates: dto.bookingSettings.closedDates ?? current.closedDates,
+      };
+    }
     if (dto.summarySettings) {
       const current = business.summarySettings || {
         dailyEnabled: true, weeklyEnabled: true, sendTime: '20:00', weeklyDay: 1,

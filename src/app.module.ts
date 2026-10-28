@@ -18,6 +18,9 @@ import { Business, BusinessSchema } from './modules/businesses/business.schema';
 import { AuthModule } from './modules/auth/auth.module';
 import { BusinessesModule } from './modules/businesses/businesses.module';
 import { ProductsModule } from './modules/products/products.module';
+import { ServicesModule } from './modules/services/services.module';
+import { ProvidersModule } from './modules/providers/providers.module';
+import { BookingsModule } from './modules/bookings/bookings.module';
 import { StockModule } from './modules/stock/stock.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { SalesModule } from './modules/sales/sales.module';
@@ -76,6 +79,9 @@ import { JwtModule } from '@nestjs/jwt';
     AuthModule,
     BusinessesModule,
     ProductsModule,
+    ServicesModule,
+    ProvidersModule,
+    BookingsModule,
     StockModule,
     CustomersModule,
     DebtsModule,

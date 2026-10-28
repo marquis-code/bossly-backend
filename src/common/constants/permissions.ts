@@ -1,6 +1,11 @@
 export const PERMISSIONS = {
   PRODUCTS_READ: 'products:read',
   PRODUCTS_WRITE: 'products:write',
+  SERVICES_READ: 'services:read',
+  SERVICES_WRITE: 'services:write',
+  BOOKINGS_READ: 'bookings:read',
+  BOOKINGS_WRITE: 'bookings:write',
+  PROVIDERS_WRITE: 'providers:write',
   STOCK_READ: 'stock:read',
   STOCK_WRITE: 'stock:write',
   ORDERS_READ: 'orders:read',
@@ -24,6 +29,10 @@ export const PERMISSIONS = {
 export const STAFF_DEFAULT_PERMISSIONS: string[] = [
   PERMISSIONS.PRODUCTS_READ,
   PERMISSIONS.PRODUCTS_WRITE,
+  PERMISSIONS.SERVICES_READ,
+  PERMISSIONS.SERVICES_WRITE,
+  PERMISSIONS.BOOKINGS_READ,
+  PERMISSIONS.BOOKINGS_WRITE,
   PERMISSIONS.STOCK_READ,
   PERMISSIONS.STOCK_WRITE,
   PERMISSIONS.ORDERS_READ,
