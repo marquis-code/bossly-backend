@@ -117,6 +117,8 @@ export class SummariesService {
     ].join('\n');
     const mail = summaryEmail({
       businessName: business.name,
+      businessLogo: business.logoUrl,
+      businessTagline: business.tagline,
       periodLabel,
       revenueKobo,
       profitKobo,

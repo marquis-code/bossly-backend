@@ -57,6 +57,8 @@ export class ReceiptsService {
     if (sendEmail && receipt.customerEmail) {
       const mail = receiptEmail({
         businessName: business.name,
+        businessLogo: business.logoUrl,
+        businessTagline: business.tagline,
         customerName: receipt.customerName,
         receiptNumber: receipt.receiptNumber,
         totalKobo: receipt.totalKobo,
@@ -198,6 +200,8 @@ export class ReceiptsService {
     if (!business) throw new NotFoundException('Business not found.');
     const mail = invoiceEmail({
       businessName: business.name,
+      businessLogo: business.logoUrl,
+      businessTagline: business.tagline,
       customerName: invoice.customerName,
       invoiceNumber: invoice.invoiceNumber,
       totalKobo: invoice.totalKobo,

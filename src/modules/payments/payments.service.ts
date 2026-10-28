@@ -190,9 +190,11 @@ export class PaymentsService {
     if (!booking) throw new NotFoundException('Booking not found.');
     if (booking.status === 'cancelled') throw new BadRequestException('This booking was cancelled.');
     if (booking.amountPaidKobo >= booking.priceKobo) throw new BadRequestException('This booking is already paid.');
-    const amountKobo = booking.depositKobo > 0
-      ? Math.max(100, Math.min(booking.depositKobo - booking.amountPaidKobo, booking.priceKobo - booking.amountPaidKobo))
-      : booking.priceKobo - booking.amountPaidKobo;
+    const outstanding = booking.priceKobo - booking.amountPaidKobo;
+    const depositOutstanding = booking.depositKobo - booking.amountPaidKobo;
+    const amountKobo = booking.depositKobo > 0 && depositOutstanding > 0
+      ? Math.max(100, Math.min(depositOutstanding, outstanding))
+      : outstanding;
     const resolved = email || booking.customerEmail || (await this.resolveEmail(booking.businessId, undefined));
     const reference = this.reference('pbkg');
     const initialized = await this.paystack.initialize({

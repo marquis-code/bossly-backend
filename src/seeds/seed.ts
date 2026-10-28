@@ -14,6 +14,11 @@ import { SalesService } from '../modules/sales/sales.service';
 import { ExpensesService } from '../modules/expenses/expenses.service';
 import { DebtsService } from '../modules/debts/debts.service';
 import { Product, ProductDocument } from '../modules/products/product.schema';
+import { Provider, ProviderDocument } from '../modules/providers/provider.schema';
+import { Service, ServiceDocument } from '../modules/services/service.schema';
+import { BookingsService } from '../modules/bookings/bookings.service';
+import { defaultBookingSettings } from '../modules/businesses/business.schema';
+import { Membership, MembershipDocument } from '../modules/memberships/membership.schema';
 
 async function seed(): Promise<void> {
   const app = await NestFactory.createApplicationContext(AppModule, { logger: ['error', 'warn', 'log'] });
@@ -21,6 +26,10 @@ async function seed(): Promise<void> {
   const mediaBase = (config.get<string>('appUrl') || 'http://localhost:3100').replace(/\/$/, '');
   const users = app.get<Model<UserDocument>>(getModelToken(User.name));
   const productModel = app.get<Model<ProductDocument>>(getModelToken(Product.name));
+  const providerModel = app.get<Model<ProviderDocument>>(getModelToken(Provider.name));
+  const serviceModel = app.get<Model<ServiceDocument>>(getModelToken(Service.name));
+  const bookings = app.get(BookingsService);
+  const memberships = app.get<Model<MembershipDocument>>(getModelToken(Membership.name));
   const businesses = app.get<Model<BusinessDocument>>(getModelToken(Business.name));
   const plans = app.get(PlansService);
   const auth = app.get(AuthService);
@@ -63,7 +72,7 @@ async function seed(): Promise<void> {
   const demoEnabled = process.env.SEED_DEMO === 'true' || (process.env.SEED_DEMO !== 'false' && !isProduction);
   if (demoEnabled) {
     const demoEmail = 'demo@ojaly.org';
-    const existing = await businesses.findOne({ email: demoEmail }).lean().exec();
+    const existing = await businesses.findOne({ $or: [{ email: demoEmail }, { slug: 'tola-thrift' }] }).lean().exec();
     if (existing) {
       console.log(`• Demo business already exists: /s/${existing.slug}`);
     } else {
@@ -197,6 +206,54 @@ async function seed(): Promise<void> {
       console.log(`✓ Demo storefront: ${mediaBase}/s/${(await businesses.findById(businessId).lean().exec())?.slug}`);
       console.log(`✓ Demo login: ${demoEmail} / Demo12345`);
       console.log(`✓ Demo data: ${products ? '3 products' : ''}, 2 sales, 1 debt (${demoDebts.items.length} in ledger), 3 expenses`);
+    }
+  }
+
+  if (demoEnabled) {
+    const serviceSlug = 'glow-room';
+    const serviceExists = await businesses.findOne({ slug: serviceSlug }).lean().exec();
+    if (!serviceExists) {
+      const demoUser = await users.findOne({ email: 'demo@ojaly.org' }).lean().exec();
+      if (demoUser && demoUser._id) {
+        const settings = { ...defaultBookingSettings(), enabled: true, autoConfirm: false, depositPercent: 20, reminderHoursBefore: 24 };
+        const business = await businesses.create({
+          name: 'The Glow Room', slug: serviceSlug, ownerId: demoUser._id.toString(), category: 'beauty',
+          businessMode: 'services', description: 'Braids, skin, nails and bridal glam in the heart of Yaba.',
+          tagline: 'Your glow. Your rules.', about: 'A small studio for hair, skin and nails. Book the person you want, at the time that works.',
+          publicPhone: '08031234567', whatsappNumber: '08031234567', email: 'hello@glowroom.ng',
+          address: '12 Herbert Macaulay Way, Yaba, Lagos', brandColor: '#B45AF2', templateKey: 'soft-serve',
+          storefrontPublished: true, publishedAt: new Date(), bookingSettings: settings,
+          sections: ['hero', 'featured', 'story', 'testimonials', 'contact'],
+          bannerUrl: `${mediaBase}/images/business/website-founder.webp`,
+          storyImageUrl: `${mediaBase}/images/business/baker.webp`,
+        });
+        await memberships.create({
+          businessId: business._id.toString(), userId: demoUser._id.toString(), role: 'owner', permissions: [], status: 'active',
+        });
+        const providers = await providerModel.create([
+          { businessId: business._id.toString(), name: 'Amaka Obi', title: 'Braider & hair artist', bio: 'Knotless, boho and cornrows — with a scalp-first approach.', color: '#B45AF2', isBookable: true, sortOrder: 1, weeklySchedule: [] },
+          { businessId: business._id.toString(), name: 'Zainab Bello', title: 'Nail & skin therapist', bio: 'Gel nails, clean girl manicures and glow facials.', color: '#FF7A59', isBookable: true, sortOrder: 2, weeklySchedule: [] },
+          { businessId: business._id.toString(), name: 'Tunde Cole', title: 'Makeup artist', bio: 'Soft glam, bridal and editorial looks.', color: '#2F7D6D', isBookable: true, sortOrder: 3, weeklySchedule: [] },
+        ]);
+        const services = await serviceModel.create([
+          { businessId: business._id.toString(), name: 'Knotless Braids', category: 'Hair', description: 'Medium knotless braids, hair included. 2–3 hours depending on length.', durationMinutes: 150, bufferBeforeMinutes: 15, bufferAfterMinutes: 15, priceKobo: 2500000, depositKobo: 500000, requiresDeposit: true, providerIds: [String(providers[0]._id)], color: '#B45AF2', sortOrder: 1, imageUrl: `${mediaBase}/images/business/market-trader.webp`, addOns: [{ name: 'Boho curls', priceKobo: 500000, durationMinutes: 30 }] },
+          { businessId: business._id.toString(), name: 'Silk Press', category: 'Hair', description: 'Wash, deep condition, silk press and trim.', durationMinutes: 90, bufferAfterMinutes: 15, priceKobo: 1500000, depositKobo: 0, requiresDeposit: false, providerIds: [String(providers[0]._id)], color: '#B45AF2', sortOrder: 2 },
+          { businessId: business._id.toString(), name: 'Gel Manicure', category: 'Nails', description: 'Shape, cuticle care and long-wear gel colour.', durationMinutes: 60, bufferAfterMinutes: 10, priceKobo: 800000, depositKobo: 0, requiresDeposit: false, providerIds: [String(providers[1]._id)], color: '#FF7A59', sortOrder: 3 },
+          { businessId: business._id.toString(), name: 'Glow Facial', category: 'Skin', description: 'Deep cleanse, gentle exfoliation and hydration for Lagos skin.', durationMinutes: 60, bufferAfterMinutes: 15, priceKobo: 2000000, depositKobo: 400000, requiresDeposit: true, providerIds: [String(providers[1]._id)], color: '#FF7A59', sortOrder: 4 },
+          { businessId: business._id.toString(), name: 'Bridal Glam', category: 'Makeup', description: 'Trial-ready bridal makeup with lashes and touch-up kit.', durationMinutes: 180, bufferBeforeMinutes: 30, priceKobo: 6000000, depositKobo: 1500000, requiresDeposit: true, providerIds: [String(providers[2]._id)], color: '#2F7D6D', sortOrder: 5 },
+        ]);
+        const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1); tomorrow.setHours(10, 0, 0, 0);
+        await bookings.create(demoUser._id.toString(), business._id.toString(), {
+          serviceId: String(services[0]._id), providerId: String(providers[0]._id), startAt: tomorrow.toISOString(),
+          customerName: 'Ada Nwosu', customerPhone: '08055551234', customerEmail: 'ada@example.com', notes: 'Shoulder-length, small parts please.',
+        });
+        const second = new Date(tomorrow); second.setHours(12, 30);
+        await bookings.create(demoUser._id.toString(), business._id.toString(), {
+          serviceId: String(services[2]._id), providerId: String(providers[1]._id), startAt: second.toISOString(),
+          customerName: 'Bisola Ajayi', customerPhone: '08055559876', customerEmail: 'bisola@example.com',
+        });
+        console.log(`✓ Service demo: ${mediaBase}/s/${serviceSlug}/services`);
+      }
     }
   }
 

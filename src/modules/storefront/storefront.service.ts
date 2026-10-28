@@ -224,6 +224,8 @@ export class StorefrontService {
       if (user?.email) {
         const mail = storefrontMessageEmail({
           businessName: business.name,
+          businessLogo: business.logoUrl,
+          businessTagline: business.tagline,
           customerName: message.name,
           customerPhone: message.phone,
           message: message.message,

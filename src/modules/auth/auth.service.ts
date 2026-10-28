@@ -183,7 +183,13 @@ export class AuthService {
     ).exec();
 
     const verifyUrl = `${this.config.get<string>('appUrl')}/verify-email?token=${verification}`;
-    const welcome = welcomeEmail(dto.name, dto.businessName, `${this.config.get<string>('appUrl')}/app`);
+    const welcome = welcomeEmail(
+      dto.name,
+      dto.businessName,
+      `${this.config.get<string>('appUrl')}/app`,
+      business.logoUrl,
+      business.tagline,
+    );
     const verificationMail = verificationEmail(dto.name, verifyUrl);
     // Deliver email verification followed by welcome email
     await this.mail.send({

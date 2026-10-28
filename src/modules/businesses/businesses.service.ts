@@ -228,6 +228,7 @@ export class BusinessesService {
       business.name,
       user.email,
       `${this.config.get('appUrl')}/reset-password?token=${token}&invite=1`,
+      business.logoUrl,
     );
     await this.mail.send({
       to: invitee.email,

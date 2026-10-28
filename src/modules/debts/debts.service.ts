@@ -289,6 +289,8 @@ export class DebtsService {
     if (!debt.customerEmail) throw new BadRequestException('This customer has no email address.');
     const mail = debtReminderEmail({
       businessName: business.name,
+      businessLogo: business.logoUrl,
+      businessTagline: business.tagline,
       customerName: debt.customerName,
       amountKobo: debt.balanceKobo,
       dueDate: lagosDisplay(debt.dueDate, 'd MMM yyyy'),
@@ -335,6 +337,8 @@ export class DebtsService {
         if (!debt.customerEmail) continue;
         const mail = debtReminderEmail({
           businessName: business.name,
+          businessLogo: business.logoUrl,
+          businessTagline: business.tagline,
           customerName: debt.customerName,
           amountKobo: debt.balanceKobo,
           dueDate: lagosDisplay(debt.dueDate, 'd MMM yyyy'),

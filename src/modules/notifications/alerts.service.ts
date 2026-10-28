@@ -78,7 +78,13 @@ export class AlertsService {
     const ownerUser = await this.users.findById(owner.userId).lean().exec();
 
     if (settings.lowStockEmail !== false && ownerUser?.email && ownerUser.notificationPrefs?.lowStock !== false) {
-      const mail = lowStockEmail(business.name, [{ name: label, remaining: variant.quantity }], dashboardUrl);
+      const mail = lowStockEmail(
+        business.name,
+        [{ name: label, remaining: variant.quantity }],
+        dashboardUrl,
+        business.logoUrl,
+        business.tagline,
+      );
       void this.mail.send({
         to: ownerUser.email,
         subject: mail.subject,
