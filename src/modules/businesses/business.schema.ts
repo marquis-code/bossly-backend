@@ -174,6 +174,9 @@ export class Business {
   @Prop({ type: String, default: null })
   campusName: string | null;
 
+  @Prop({ type: String, default: null, index: true })
+  campusAmbassadorCode: string | null;
+
   @Prop({ type: Boolean, default: false })
   customDomainVerified: boolean;
 

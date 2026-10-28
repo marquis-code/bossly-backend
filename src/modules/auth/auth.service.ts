@@ -143,6 +143,7 @@ export class AuthService {
               seoDescription: `Shop from ${dto.businessName} on Ojaly.`,
               campusCode: campus?.code || null,
               campusName: campus?.name || null,
+              campusAmbassadorCode: dto.ambassador || null,
             },
           ],
           { session },

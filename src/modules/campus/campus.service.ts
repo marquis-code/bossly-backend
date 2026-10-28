@@ -6,7 +6,7 @@ import { MailService } from '../mail/mail.service';
 import { normalizeNigerianPhone } from '../../common/utils/phone';
 import { sanitizeText } from '../../common/utils/sanitize';
 import { ApplyCampusDto } from './campus.dto';
-import { CampusApplication, CampusApplicationDocument, CampusApplicationStatus } from './campus.schema';
+import { CampusApplication, CampusApplicationDocument, CampusApplicationStatus, CampusPayout, CampusPayoutDocument } from './campus.schema';
 import { campusByCode, LAGOS_CAMPUSES } from './campus.constants';
 
 @Injectable()
@@ -14,6 +14,7 @@ export class CampusService {
   constructor(
     @InjectModel(CampusApplication.name) private readonly applicationsModel: Model<CampusApplicationDocument>,
     @InjectModel(Business.name) private readonly businesses: Model<BusinessDocument>,
+    @InjectModel(CampusPayout.name) private readonly payoutsModel: Model<CampusPayoutDocument>,
     private readonly mail: MailService,
   ) {}
 
@@ -77,13 +78,78 @@ export class CampusService {
     const filter: Record<string, unknown> = {};
     if (status && status !== 'all') filter.status = status;
     const items = await this.applicationsModel.find(filter).sort({ createdAt: -1 }).limit(200).lean().exec();
-    return items.map((item) => this.view(item));
+    const codes = items.map((item) => item.ambassadorCode).filter(Boolean) as string[];
+    const businessRows = codes.length ? await this.businesses.aggregate([
+      { $match: { campusAmbassadorCode: { $in: codes } } },
+      { $group: { _id: '$campusAmbassadorCode', signups: { $sum: 1 }, activated: { $sum: { $cond: [{ $ne: ['$firstSaleAt', null] }, 1, 0] } } } },
+    ]).exec() as { _id: string; signups: number; activated: number }[] : [];
+    const views = [];
+    for (const item of items) {
+      const stats = businessRows.find((row) => row._id === item.ambassadorCode);
+      const activated = stats?.activated || 0;
+      const earned = activated * (item.commissionKobo || 1000);
+      views.push({ ...this.view(item), signups: stats?.signups || 0, activated, earnedKobo: earned, owedKobo: Math.max(0, earned - (item.totalPaidKobo || 0)) });
+    }
+    return views;
+  }
+
+  async payouts(applicationId?: string) {
+    const filter: Record<string, unknown> = {};
+    if (applicationId) filter.applicationId = applicationId;
+    const items = await this.payoutsModel.find(filter).sort({ createdAt: -1 }).limit(300).lean().exec();
+    return items.map((item) => ({
+      id: String(item._id), applicationId: item.applicationId, ambassadorCode: item.ambassadorCode,
+      ambassadorName: item.ambassadorName, campusCode: item.campusCode, amountKobo: item.amountKobo,
+      status: item.status, reference: item.reference, note: item.note, paidAt: item.paidAt, createdAt: item.createdAt,
+    }));
+  }
+
+  async createPayout(applicationId: string, amountKobo: number, note = '') {
+    const application = await this.applicationsModel.findById(applicationId).lean().exec();
+    if (!application) throw new NotFoundException('Application not found.');
+    if (application.status !== 'approved' || !application.ambassadorCode) throw new BadRequestException('Approve the ambassador before recording payouts.');
+    if (amountKobo < 100) throw new BadRequestException('Payout must be at least ₦1.');
+    const payout = await this.payoutsModel.create({
+      applicationId, ambassadorCode: application.ambassadorCode, ambassadorName: application.name,
+      campusCode: application.campusCode, amountKobo, note: sanitizeText(note, 300), status: 'pending',
+    });
+    return this.payoutView(payout);
+  }
+
+  async updatePayout(id: string, status: 'pending' | 'paid' | 'cancelled', reference?: string) {
+    const payout = await this.payoutsModel.findById(id).exec();
+    if (!payout) throw new NotFoundException('Payout not found.');
+    const wasPaid = payout.status === 'paid';
+    payout.status = status;
+    if (reference) payout.reference = reference;
+    if (status === 'paid') payout.paidAt = new Date();
+    await payout.save();
+    if (status === 'paid' && !wasPaid) {
+      await this.applicationsModel.updateOne({ _id: payout.applicationId }, { $inc: { totalPaidKobo: payout.amountKobo } }).exec();
+    }
+    return this.payoutView(payout);
   }
 
   async setStatus(id: string, status: CampusApplicationStatus) {
-    const application = await this.applicationsModel.findByIdAndUpdate(id, { $set: { status } }, { new: true }).lean().exec();
+    const application = await this.applicationsModel.findById(id).exec();
     if (!application) throw new NotFoundException('Application not found.');
+    application.status = status;
+    if (status === 'approved' && !application.ambassadorCode) {
+      let code = `${application.campusCode}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+      while (await this.applicationsModel.exists({ ambassadorCode: code })) code = `${application.campusCode}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+      application.ambassadorCode = code;
+    }
+    await application.save();
     return this.view(application);
+  }
+
+  private payoutView(p: CampusPayout | (CampusPayout & { _id: unknown })) {
+    const payout = p as CampusPayout & { _id: unknown };
+    return {
+      id: String(payout._id), applicationId: payout.applicationId, ambassadorCode: payout.ambassadorCode,
+      ambassadorName: payout.ambassadorName, campusCode: payout.campusCode, amountKobo: payout.amountKobo,
+      status: payout.status, reference: payout.reference, note: payout.note, paidAt: payout.paidAt, createdAt: payout.createdAt,
+    };
   }
 
   private view(application: CampusApplication | (CampusApplication & { _id: unknown })) {
@@ -92,6 +158,7 @@ export class CampusService {
       id: String(a._id), name: a.name, phone: a.phone, email: a.email,
       campusCode: a.campusCode, campusName: a.campusName, year: a.year,
       socials: a.socials, why: a.why, status: a.status, createdAt: a.createdAt,
+      ambassadorCode: a.ambassadorCode, commissionKobo: a.commissionKobo || 1000, totalPaidKobo: a.totalPaidKobo || 0,
     };
   }
 }
