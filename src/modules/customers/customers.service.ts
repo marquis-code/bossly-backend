@@ -5,6 +5,7 @@ import { Customer, CustomerDocument } from './customer.schema';
 import { Sale, SaleDocument } from '../sales/sale.schema';
 import { Debt, DebtDocument } from '../debts/debt.schema';
 import { Order, OrderDocument } from '../orders/order.schema';
+import { Booking, BookingDocument } from '../bookings/booking.schema';
 import { CreateCustomerDto, CustomerQueryDto, UpdateCustomerDto } from './dto/customer.dto';
 import { normalizeNigerianPhone } from '../../common/utils/phone';
 import { sanitizeText } from '../../common/utils/sanitize';
@@ -16,6 +17,7 @@ export class CustomersService {
     @InjectModel(Sale.name) private readonly sales: Model<SaleDocument>,
     @InjectModel(Debt.name) private readonly debts: Model<DebtDocument>,
     @InjectModel(Order.name) private readonly orders: Model<OrderDocument>,
+    @InjectModel(Booking.name) private readonly bookings: Model<BookingDocument>,
   ) {}
 
   normalizePhone(phone: string): string {
@@ -98,12 +100,13 @@ export class CustomersService {
   async findOne(businessId: string, customerId: string) {
     const customer = await this.customers.findOne({ _id: customerId, businessId }).lean().exec();
     if (!customer) throw new NotFoundException('Customer not found.');
-    const [sales, debts, orders] = await Promise.all([
+    const [sales, debts, orders, bookings] = await Promise.all([
       this.sales.find({ businessId, customerId }).sort({ soldAt: -1 }).limit(50).lean().exec(),
       this.debts.find({ businessId, customerId }).sort({ createdAt: -1 }).limit(50).lean().exec(),
       this.orders.find({ businessId, customerId }).sort({ createdAt: -1 }).limit(20).lean().exec(),
+      this.bookings.find({ businessId, customerId }).sort({ startAt: -1 }).limit(50).lean().exec(),
     ]);
-    return { customer, sales, debts, orders };
+    return { customer, sales, debts, orders, bookings };
   }
 
   async update(businessId: string, customerId: string, dto: UpdateCustomerDto) {
