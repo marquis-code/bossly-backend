@@ -28,7 +28,7 @@ export class BookingsController {
   @Get('availability')
   @Permissions(PERMISSIONS.BOOKINGS_READ)
   slots(@CurrentBusiness() businessId: string, @Query() query: AvailabilityQueryDto) {
-    return this.availability.forService(businessId, query.serviceId, query.date, query.providerId);
+    return this.availability.forService(businessId, query.serviceId, query.date, query.providerId, query.durationMinutes);
   }
 
   @Get(':id')

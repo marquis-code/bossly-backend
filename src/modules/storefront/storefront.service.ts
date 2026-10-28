@@ -84,9 +84,9 @@ export class StorefrontService {
     return { business: this.publicBusiness(business), template: getTemplate(business.templateKey), service, providers: eligible };
   }
 
-  async availabilityForService(slug: string, query: { serviceId: string; date: string; providerId?: string }) {
+  async availabilityForService(slug: string, query: { serviceId: string; date: string; providerId?: string; durationMinutes?: number }) {
     const business = await this.requireBusiness({ slug: slug.toLowerCase() });
-    return this.availability.forService(business._id.toString(), query.serviceId, query.date, query.providerId);
+    return this.availability.forService(business._id.toString(), query.serviceId, query.date, query.providerId, query.durationMinutes);
   }
 
   async placeBooking(slug: string, dto: CreateBookingDto) {

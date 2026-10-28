@@ -7,6 +7,7 @@ import { Membership, MembershipSchema } from '../memberships/membership.schema';
 import { User, UserSchema } from '../users/user.schema';
 import { Product, ProductSchema } from '../products/product.schema';
 import { Order, OrderSchema } from '../orders/order.schema';
+import { Service, ServiceSchema } from '../services/service.schema';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { Order, OrderSchema } from '../orders/order.schema';
       { name: User.name, schema: UserSchema },
       { name: Product.name, schema: ProductSchema },
       { name: Order.name, schema: OrderSchema },
+      { name: Service.name, schema: ServiceSchema },
     ]),
   ],
   controllers: [BusinessesController],

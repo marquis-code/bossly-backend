@@ -7,6 +7,7 @@ import { Business, BusinessSchema } from '../businesses/business.schema';
 import { Membership, MembershipSchema } from '../memberships/membership.schema';
 import { User, UserSchema } from '../users/user.schema';
 import { Order, OrderSchema } from '../orders/order.schema';
+import { Booking, BookingSchema } from '../bookings/booking.schema';
 import { DebtsModule } from '../debts/debts.module';
 import { ExpensesModule } from '../expenses/expenses.module';
 import { ReceiptsModule } from '../receipts/receipts.module';
@@ -22,6 +23,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
       { name: Membership.name, schema: MembershipSchema },
       { name: User.name, schema: UserSchema },
       { name: Order.name, schema: OrderSchema },
+      { name: Booking.name, schema: BookingSchema },
     ]),
     DebtsModule,
     ExpensesModule,

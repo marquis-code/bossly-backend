@@ -16,6 +16,8 @@ import { Business, BusinessDocument } from '../businesses/business.schema';
 import { Membership, MembershipDocument } from '../memberships/membership.schema';
 import { User, UserDocument } from '../users/user.schema';
 import { Order, OrderDocument } from '../orders/order.schema';
+import { Booking, BookingDocument } from '../bookings/booking.schema';
+import { WhatsappClientService } from '../whatsapp/whatsapp-client.service';
 
 @Injectable()
 export class JobsService {
@@ -28,6 +30,7 @@ export class JobsService {
     @InjectModel(Membership.name) private readonly memberships: Model<MembershipDocument>,
     @InjectModel(User.name) private readonly users: Model<UserDocument>,
     @InjectModel(Order.name) private readonly ordersModel: Model<OrderDocument>,
+    @InjectModel(Booking.name) private readonly bookings: Model<BookingDocument>,
     private readonly debts: DebtsService,
     private readonly expenses: ExpensesService,
     private readonly receipts: ReceiptsService,
@@ -35,7 +38,55 @@ export class JobsService {
     private readonly notifications: NotificationsService,
     private readonly mail: MailService,
     private readonly config: ConfigService,
+    private readonly whatsapp: WhatsappClientService,
   ) {}
+
+  @Cron('*/15 * * * *', { name: 'booking-reminders' })
+  async bookingReminders(): Promise<void> {
+    try {
+      const now = new Date();
+      const upcoming = await this.bookings.find({
+        status: { $in: ['pending', 'confirmed'] },
+        reminderSentAt: null,
+        startAt: { $gt: now, $lt: new Date(now.getTime() + 48 * 3600000) },
+      }).limit(200).exec();
+      for (const booking of upcoming) {
+        const business = await this.businesses.findById(booking.businessId).lean().exec();
+        const hours = business?.bookingSettings?.reminderHoursBefore ?? 24;
+        if (booking.startAt.getTime() - now.getTime() > hours * 3600000) continue;
+        const when = new Intl.DateTimeFormat('en-NG', {
+          timeZone: booking.timezone, weekday: 'short', day: 'numeric', month: 'short',
+          hour: 'numeric', minute: '2-digit',
+        }).format(booking.startAt);
+        if (booking.customerEmail) {
+          await this.mail.send({
+            to: booking.customerEmail,
+            subject: `Reminder: ${booking.serviceName} at ${business?.name || 'your appointment'}`,
+            html: `<p>Hi ${booking.customerName},</p><p>A reminder that your <strong>${booking.serviceName}</strong> with <strong>${booking.providerName}</strong> is on <strong>${when}</strong>.</p><p>Reference: ${booking.bookingNumber}</p><p><a href="${this.config.get('appUrl')}/booking/${booking.publicToken}">View or change your booking</a></p>`,
+            template: 'booking_reminder',
+            businessId: booking.businessId,
+          }).catch(() => undefined);
+        }
+        if (booking.customerPhone) {
+          await this.whatsapp.send({
+            businessId: booking.businessId,
+            phone: booking.customerPhone,
+            text: `Reminder: your ${booking.serviceName} with ${booking.providerName} is ${when}. Manage: ${this.config.get('appUrl')}/booking/${booking.publicToken}`,
+          }).catch(() => undefined);
+        }
+        await this.notifications.create({
+          businessId: booking.businessId, type: 'booking',
+          title: `Reminder sent · ${booking.bookingNumber}`,
+          message: `${booking.customerName} · ${booking.serviceName} · ${when}`,
+          tone: 'info', data: { bookingId: booking._id.toString() },
+        });
+        booking.reminderSentAt = new Date();
+        await booking.save();
+      }
+    } catch (error) {
+      this.logger.warn(`Booking reminders failed: ${error instanceof Error ? error.message : 'unknown'}`);
+    }
+  }
 
   @Cron('15 0 * * *', { timeZone: 'Africa/Lagos', name: 'trial-enforcement' })
   async enforceTrials(): Promise<void> {

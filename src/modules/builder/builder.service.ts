@@ -4,6 +4,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Business, BusinessDocument } from '../businesses/business.schema';
 import { Product, ProductDocument } from '../products/product.schema';
+import { Service, ServiceDocument } from '../services/service.schema';
 import { PlansService } from '../plans/plans.service';
 import { AuditService } from '../audit/audit.service';
 import { UpdateBusinessDto } from '../businesses/dto/business.dto';
@@ -16,6 +17,7 @@ export class BuilderService {
   constructor(
     @InjectModel(Business.name) private readonly businesses: Model<BusinessDocument>,
     @InjectModel(Product.name) private readonly products: Model<ProductDocument>,
+    @InjectModel(Service.name) private readonly services: Model<ServiceDocument>,
     private readonly plans: PlansService,
     private readonly businessesService: BusinessesService,
     private readonly audit: AuditService,
@@ -56,9 +58,14 @@ export class BuilderService {
   }
 
   async publish(user: AuthenticatedUser, businessId: string) {
-    const productCount = await this.products.countDocuments({ businessId, isActive: true }).exec();
-    if (productCount === 0) {
-      throw new NotFoundException('Add at least one product before publishing your storefront.');
+    const businessDoc = await this.businesses.findById(businessId).select('businessMode').lean().exec();
+    const [productCount, serviceCount] = await Promise.all([
+      this.products.countDocuments({ businessId, isActive: true }).exec(),
+      this.services.countDocuments({ businessId, isActive: true, isPublic: true }).exec(),
+    ]);
+    const needsCatalogue = businessDoc?.businessMode !== 'services';
+    if ((needsCatalogue && productCount === 0) || (businessDoc?.businessMode === 'services' && serviceCount === 0)) {
+      throw new NotFoundException(needsCatalogue ? 'Add at least one product before publishing your storefront.' : 'Add at least one service before publishing your booking page.');
     }
     const business = await this.businesses.findByIdAndUpdate(
       businessId,

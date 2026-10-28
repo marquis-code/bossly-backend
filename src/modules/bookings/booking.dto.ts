@@ -149,4 +149,12 @@ export class AvailabilityQueryDto {
   @IsString()
   @IsOptional()
   providerId?: string;
+
+  @ApiPropertyOptional({ description: 'Override duration in minutes, including selected add-ons' })
+  @Type(() => Number)
+  @IsInt()
+  @Min(5)
+  @Max(1440)
+  @IsOptional()
+  durationMinutes?: number;
 }

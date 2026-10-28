@@ -4,6 +4,7 @@ import { BuilderController } from './builder.controller';
 import { BuilderService } from './builder.service';
 import { Business, BusinessSchema } from '../businesses/business.schema';
 import { Product, ProductSchema } from '../products/product.schema';
+import { Service, ServiceSchema } from '../services/service.schema';
 import { BusinessesModule } from '../businesses/businesses.module';
 
 @Module({
@@ -11,6 +12,7 @@ import { BusinessesModule } from '../businesses/businesses.module';
     MongooseModule.forFeature([
       { name: Business.name, schema: BusinessSchema },
       { name: Product.name, schema: ProductSchema },
+      { name: Service.name, schema: ServiceSchema },
     ]),
     BusinessesModule,
   ],
