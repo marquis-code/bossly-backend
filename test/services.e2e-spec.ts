@@ -133,6 +133,17 @@ describe('Service menu and bookings (e2e)', () => {
     expect(calendar.text).toContain('BEGIN:VCALENDAR');
   });
 
+  it('creates a prepaid package and exposes it publicly', async () => {
+    const created = await http.post('/api/v1/packages').set(base()).send({
+      name: '3 Gel Manicures', serviceId, sessions: 3, priceKobo: 2000000, validityDays: 60,
+    });
+    expect(created.status).toBe(201);
+    expect(created.body.data.sessions).toBe(3);
+    const publicList = await http.get(`/api/v1/storefront/${slug}/packages`);
+    expect(publicList.status).toBe(200);
+    expect(publicList.body.data.items.some((item: { id: string }) => item.id === created.body.data.id)).toBe(true);
+  });
+
   it('captures a waitlist request and notifies it', async () => {
     const from = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Lagos' }).format(new Date(Date.now() + 10 * 86400000));
     const to = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Lagos' }).format(new Date(Date.now() + 17 * 86400000));

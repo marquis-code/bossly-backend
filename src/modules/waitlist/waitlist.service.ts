@@ -47,6 +47,7 @@ export class WaitlistService {
       customerEmail: dto.customerEmail || null,
       preferredFrom: from,
       preferredTo: to,
+      preferredStartAt: dto.preferredStartAt ? new Date(dto.preferredStartAt) : null,
       notes: sanitizeText(dto.notes, 500),
       status: 'waiting',
     });
@@ -141,7 +142,7 @@ export class WaitlistService {
       id: String(e._id), serviceId: e.serviceId, serviceName: e.serviceName,
       providerId: e.providerId, providerName: e.providerName,
       customerName: e.customerName, customerPhone: e.customerPhone, customerEmail: e.customerEmail,
-      preferredFrom: e.preferredFrom, preferredTo: e.preferredTo,
+      preferredFrom: e.preferredFrom, preferredTo: e.preferredTo, preferredStartAt: e.preferredStartAt,
       notes: e.notes, status: e.status, notifiedAt: e.notifiedAt, createdAt: e.createdAt,
     };
   }

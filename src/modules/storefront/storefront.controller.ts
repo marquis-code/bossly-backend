@@ -7,6 +7,7 @@ import { StorefrontService } from './storefront.service';
 import { StorefrontContactDto, StorefrontOrderDto, StorefrontProductQueryDto } from './dto/storefront.dto';
 import { AvailabilityQueryDto, CreatePublicBookingDto } from '../bookings/booking.dto';
 import { CreateWaitlistDto } from '../waitlist/waitlist.dto';
+import { PackageCheckoutDto } from '../packages/package.dto';
 
 @ApiTags('Storefront')
 @Public()
@@ -52,6 +53,16 @@ export class StorefrontController {
   @Get(':slug/availability')
   availability(@Param('slug') slug: string, @Query() query: AvailabilityQueryDto) {
     return this.storefront.availabilityForService(slug, query);
+  }
+
+  @Get(':slug/packages')
+  packages(@Param('slug') slug: string) {
+    return this.storefront.packagesList(slug);
+  }
+
+  @Post(':slug/packages/:id/checkout')
+  packageCheckout(@Param('slug') slug: string, @Param('id') id: string, @Body() dto: PackageCheckoutDto) {
+    return this.storefront.packageCheckout(slug, id, dto);
   }
 
   @Post(':slug/waitlist')

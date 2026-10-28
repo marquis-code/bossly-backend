@@ -168,6 +168,12 @@ export class Business {
   @Prop({ type: String, default: null })
   calendarToken: string | null;
 
+  @Prop({ type: String, default: null, index: true })
+  campusCode: string | null;
+
+  @Prop({ type: String, default: null })
+  campusName: string | null;
+
   @Prop({ type: Boolean, default: false })
   customDomainVerified: boolean;
 

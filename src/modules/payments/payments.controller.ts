@@ -156,6 +156,12 @@ export class PaymentsController {
   }
 
   @Public()
+  @Post('public/payments/package/:token')
+  publicPackagePay(@Param('token') token: string, @Body() dto: PublicInvoicePaymentDto) {
+    return this.payments.publicPackagePurchaseLink(token, dto.email);
+  }
+
+  @Public()
   @Post('public/payments/booking/:token')
   publicBookingPay(@Param('token') token: string, @Body() dto: PublicInvoicePaymentDto) {
     return this.payments.publicBookingDepositLink(token, dto.email);

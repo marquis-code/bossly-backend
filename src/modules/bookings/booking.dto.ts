@@ -44,6 +44,11 @@ export class CreateBookingDto {
   @MaxLength(2000)
   notes?: string;
 
+  @ApiPropertyOptional({ description: 'Prepaid package redemption code' })
+  @IsString()
+  @IsOptional()
+  packageCode?: string;
+
   @ApiPropertyOptional({ type: [String], description: 'Names of selected add-ons' })
   @IsArray()
   @ArrayMaxSize(20)

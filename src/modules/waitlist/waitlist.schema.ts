@@ -40,6 +40,9 @@ export class WaitlistEntry {
   @Prop({ type: Date, required: true })
   preferredTo: Date;
 
+  @Prop({ type: Date, default: null })
+  preferredStartAt: Date | null;
+
   @Prop({ type: String, default: '' })
   notes: string;
 

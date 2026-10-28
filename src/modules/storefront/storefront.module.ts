@@ -15,6 +15,7 @@ import { ProvidersModule } from '../providers/providers.module';
 import { BookingsModule } from '../bookings/bookings.module';
 import { WaitlistModule } from '../waitlist/waitlist.module';
 import { ReviewsModule } from '../reviews/reviews.module';
+import { PackagesModule } from '../packages/packages.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { ReviewsModule } from '../reviews/reviews.module';
     BookingsModule,
     WaitlistModule,
     ReviewsModule,
+    PackagesModule,
   ],
   controllers: [StorefrontController, StorefrontInboxController],
   providers: [StorefrontService],

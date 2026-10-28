@@ -22,6 +22,12 @@ import { User, UserDocument } from '../users/user.schema';
 import { Subscription, SubscriptionDocument } from '../plans/subscription.schema';
 import { Coupon, CouponDocument } from '../plans/coupon.schema';
 import { Booking, BookingDocument } from '../bookings/booking.schema';
+import { PackagePurchase, PackagePurchaseDocument } from '../packages/package.schema';
+import { Sale, SaleDocument } from '../sales/sale.schema';
+import { Counter, CounterDocument } from '../plans/counter.schema';
+import { Customer, CustomerDocument } from '../customers/customer.schema';
+import { ReceiptsService } from '../receipts/receipts.service';
+import { nextSequence } from '../../common/utils/order-number';
 import { PlansService } from '../plans/plans.service';
 import { OrdersService } from '../orders/orders.service';
 import { DebtsService } from '../debts/debts.service';
@@ -61,6 +67,11 @@ export class PaymentsService {
     @InjectModel(Subscription.name) private readonly subscriptions: Model<SubscriptionDocument>,
     @InjectModel(Coupon.name) private readonly coupons: Model<CouponDocument>,
     @InjectModel(Booking.name) private readonly bookings: Model<BookingDocument>,
+    @InjectModel(PackagePurchase.name) private readonly packagePurchases: Model<PackagePurchaseDocument>,
+    @InjectModel(Sale.name) private readonly sales: Model<SaleDocument>,
+    @InjectModel(Counter.name) private readonly counters: Model<CounterDocument>,
+    @InjectModel(Customer.name) private readonly customers: Model<CustomerDocument>,
+    private readonly receipts: ReceiptsService,
     @InjectConnection() private readonly connection: Connection,
     private readonly paystack: PaystackService,
     private readonly plans: PlansService,
@@ -204,6 +215,29 @@ export class PaymentsService {
     await booking.save();
     if (booking.paymentStatus === 'refunded') await this.payments.updateOne({ _id: payment._id }, { $set: { status: 'reversed' } }).exec();
     return { refunded: true, amountKobo: amount, bookingId: booking._id.toString(), paymentReference: payment.reference };
+  }
+
+  async publicPackagePurchaseLink(token: string, email?: string) {
+    const purchase = await this.packagePurchases.findOne({ publicToken: token }).lean().exec();
+    if (!purchase) throw new NotFoundException('Package purchase not found.');
+    if (purchase.status === 'active') throw new BadRequestException('This package is already active.');
+    if (purchase.status === 'cancelled') throw new BadRequestException('This package purchase was cancelled.');
+    const resolved = email || purchase.customerEmail || (await this.resolveEmail(purchase.businessId, undefined));
+    const reference = this.reference('pkg');
+    const initialized = await this.paystack.initialize({
+      email: resolved,
+      amountKobo: purchase.priceKobo,
+      reference,
+      callbackUrl: `${this.config.get('appUrl')}/package/${purchase.publicToken}?paid=1`,
+      metadata: { purpose: 'package', packagePurchaseId: purchase._id.toString(), businessId: purchase.businessId, packageName: purchase.packageName },
+    });
+    await this.payments.create({
+      reference, businessId: purchase.businessId, purpose: 'package', packagePurchaseId: purchase._id.toString(),
+      amountKobo: purchase.priceKobo, email: resolved, status: 'pending',
+      authorizationUrl: initialized.authorizationUrl, accessCode: initialized.accessCode,
+      metadata: { packageName: purchase.packageName, customerName: purchase.customerName },
+    });
+    return { reference, authorizationUrl: initialized.authorizationUrl, amountKobo: purchase.priceKobo };
   }
 
   async publicBookingDepositLink(token: string, email?: string) {
@@ -462,6 +496,10 @@ export class PaymentsService {
       const booking = await this.bookings.findById(payment.bookingId).select('publicToken').lean().exec();
       if (booking?.publicToken) return `${base}/booking/${booking.publicToken}?paid=1`;
     }
+    if (payment.purpose === 'package' && payment.packagePurchaseId) {
+      const purchase = await this.packagePurchases.findById(payment.packagePurchaseId).select('publicToken').lean().exec();
+      if (purchase?.publicToken) return `${base}/package/${purchase.publicToken}?paid=1`;
+    }
     return null;
   }
 
@@ -593,6 +631,32 @@ export class PaymentsService {
           { _id: claimed.invoiceId, businessId: claimed.businessId },
           { $set: { status: 'paid', paidAt: new Date(), paymentId: claimed._id.toString() } },
         ).exec();
+      } else if (claimed.purpose === 'package' && claimed.packagePurchaseId) {
+        const purchase = await this.packagePurchases.findOne({ _id: claimed.packagePurchaseId, businessId: claimed.businessId }).exec();
+        if (!purchase) throw new NotFoundException('Package purchase not found.');
+        if (purchase.status !== 'active') {
+          purchase.status = 'active';
+          purchase.paymentStatus = 'paid';
+          purchase.amountPaidKobo = claimed.amountKobo;
+          purchase.paymentReference = claimed.reference;
+          purchase.purchasedAt = new Date();
+          await purchase.save();
+        }
+        if (!purchase.saleId) {
+          const saleNumber = await nextSequence(this.counters as unknown as Model<Record<string, unknown>>, purchase.businessId, 'sale', 'SALE');
+          const [sale] = await this.sales.create([{
+            businessId: purchase.businessId, saleNumber, customerId: purchase.customerId,
+            customerName: purchase.customerName, customerPhone: purchase.customerPhone, customerEmail: purchase.customerEmail,
+            items: [{ productId: `package:${purchase.packageId}`, variantId: null, name: `Package: ${purchase.packageName}`, variantName: `${purchase.sessionsTotal} session${purchase.sessionsTotal === 1 ? '' : 's'}`, sku: '', quantity: 1, unitPriceKobo: purchase.priceKobo, unitCostKobo: 0, discountKobo: 0, lineTotalKobo: purchase.priceKobo, lineCostKobo: 0, imageUrl: null }],
+            subtotalKobo: purchase.priceKobo, discountKobo: 0, deliveryFeeKobo: 0, totalKobo: purchase.priceKobo, costKobo: 0, grossProfitKobo: purchase.priceKobo,
+            amountPaidKobo: claimed.amountKobo, paymentStatus: 'paid', paymentMethod: 'paystack',
+            notes: `Prepaid package · code ${purchase.redemptionCode}`, source: 'package', soldAt: new Date(),
+          }]);
+          purchase.saleId = sale._id.toString();
+          await purchase.save();
+          if (purchase.customerId) await this.customers.updateOne({ _id: purchase.customerId, businessId: purchase.businessId }, { $inc: { totalSpentKobo: purchase.priceKobo, orderCount: 1 }, $set: { lastPurchaseAt: new Date() } }).exec();
+          await this.receipts.createForSale(sale, true).catch(() => undefined);
+        }
       } else if (claimed.purpose === 'booking' && claimed.bookingId) {
         const booking = await this.bookings.findOne({ _id: claimed.bookingId, businessId: claimed.businessId }).exec();
         if (!booking) throw new NotFoundException('Booking not found.');

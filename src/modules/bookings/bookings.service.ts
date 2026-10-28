@@ -12,6 +12,8 @@ import { Service, ServiceDocument } from '../services/service.schema';
 import { NotificationsService } from '../notifications/notifications.service';
 import { MailService } from '../mail/mail.service';
 import { SmsService } from '../sms/sms.service';
+import { PackagesService } from '../packages/packages.service';
+import { CalendarService } from '../calendar/calendar.service';
 import { DebtsService } from '../debts/debts.service';
 import { ReceiptsService } from '../receipts/receipts.service';
 import { WaitlistService } from '../waitlist/waitlist.service';
@@ -48,6 +50,8 @@ export class BookingsService {
     private readonly notifications: NotificationsService,
     private readonly mail: MailService,
     private readonly sms: SmsService,
+    private readonly packages: PackagesService,
+    private readonly calendarSync: CalendarService,
     private readonly config: ConfigService,
   ) {}
 
@@ -117,17 +121,20 @@ export class BookingsService {
     const startAt = new Date(dto.startAt);
     const provider = await this.resolveProvider(businessId, service, dto.providerId);
     const addOns = this.selectedAddOns(service, dto.addOnNames || []);
+    const packageRedemption = dto.packageCode ? await this.packages.validateRedemption(businessId, dto.packageCode, service._id.toString(), phone) : null;
     const addonMinutes = addOns.reduce((sum, a) => sum + (a.durationMinutes || 0), 0);
     const durationMinutes = service.durationMinutes + addonMinutes;
     const timezone = business.timezone || 'Africa/Lagos';
     await this.availability.assertSlot(businessId, service._id.toString(), startAt, String(provider._id), timezone, durationMinutes, { ignoreWindow: source !== 'storefront' });
 
     const totalKobo = service.priceKobo + addOns.reduce((sum, a) => sum + a.priceKobo, 0);
+    const packageValueKobo = packageRedemption ? totalKobo : 0;
+    const chargeKobo = packageRedemption ? 0 : totalKobo;
     const depositPercent = business.bookingSettings?.depositPercent || 0;
-    const depositKobo = service.requiresDeposit
+    const depositKobo = packageRedemption ? 0 : service.requiresDeposit
       ? Math.min(totalKobo, service.depositKobo || Math.round((totalKobo * depositPercent) / 100))
       : 0;
-    const shouldConfirm = Boolean(business.bookingSettings?.autoConfirm) && depositKobo <= 0;
+    const shouldConfirm = packageRedemption ? true : Boolean(business.bookingSettings?.autoConfirm) && depositKobo <= 0;
     const blockStartAt = addMinutes(startAt, -(service.bufferBeforeMinutes || 0));
     const endAt = addMinutes(startAt, durationMinutes);
     const blockEndAt = addMinutes(endAt, service.bufferAfterMinutes || 0);
@@ -194,10 +201,15 @@ export class BookingsService {
           status: shouldConfirm ? 'confirmed' : 'pending',
           source,
           notes: sanitizeText(dto.notes, 2000),
-          priceKobo: totalKobo,
+          priceKobo: chargeKobo,
+          packageValueKobo,
+          packagePurchaseId: packageRedemption?.id || null,
+          packageCode: packageRedemption?.redemptionCode || null,
+          packageName: packageRedemption?.packageName || null,
           depositKobo,
           amountPaidKobo: 0,
-          paymentStatus: 'unpaid',
+          paymentStatus: packageRedemption ? 'paid' : 'unpaid',
+          paymentReference: packageRedemption ? `package:${packageRedemption.redemptionCode}` : null,
           seriesId: series?.id || null,
           seriesIndex: series?.index || 0,
           seriesTotal: series?.total || 1,
@@ -210,6 +222,14 @@ export class BookingsService {
       await session.endSession();
     }
 
+    if (packageRedemption) {
+      try {
+        await this.packages.consume(packageRedemption.id, businessId);
+      } catch {
+        await this.bookings.updateOne({ _id: created._id }, { $set: { status: 'cancelled', cancellationReason: 'Package redemption failed' } }).exec();
+        throw new BadRequestException('The package could not be redeemed. No session was used.');
+      }
+    }
     if (notify) await this.notifications.create({
       businessId,
       type: 'booking',
@@ -219,6 +239,7 @@ export class BookingsService {
       data: { bookingId: created._id.toString(), startAt: created.startAt.toISOString() },
     });
     if (notify) await this.sendConfirmation(created, business as unknown as BusinessDocument).catch(() => undefined);
+    void this.calendarSync.pushBooking(created).catch(() => undefined);
     return this.view(created);
   }
 
@@ -352,7 +373,10 @@ export class BookingsService {
     if (status === 'no_show') booking.notes = `${booking.notes}\nNo-show recorded`.trim();
     booking.history.push({ status, at: new Date(), by: userId, note: reason || '' });
     await booking.save();
-    if (status === 'cancelled') await this.waitlist.offerOpening(businessId, booking.serviceId, booking.startAt).catch(() => undefined);
+    if (status === 'cancelled') {
+      await this.waitlist.offerOpening(businessId, booking.serviceId, booking.startAt).catch(() => undefined);
+      void this.calendarSync.removeBooking(booking).catch(() => undefined);
+    }
     return this.view(booking);
   }
 
@@ -375,6 +399,7 @@ export class BookingsService {
     booking.history.push({ status: 'cancelled', at: new Date(), by: 'customer', note: booking.cancellationReason });
     await booking.save();
     await this.waitlist.offerOpening(booking.businessId, booking.serviceId, booking.startAt).catch(() => undefined);
+    void this.calendarSync.removeBooking(booking).catch(() => undefined);
     return { cancelled: true, booking: this.view(booking) };
   }
 
@@ -433,6 +458,7 @@ export class BookingsService {
       await session.endSession();
     }
     await this.waitlist.offerOpening(booking.businessId, booking.serviceId, oldStartAt).catch(() => undefined);
+    void this.calendarSync.resyncBooking(booking).catch(() => undefined);
     return this.view(booking);
   }
 
@@ -472,6 +498,15 @@ export class BookingsService {
     const booking = await this.bookings.findOne({ _id: id, businessId }).exec();
     if (!booking) throw new NotFoundException('Booking not found.');
     if (booking.status === 'cancelled') throw new BadRequestException('A cancelled booking cannot be completed.');
+    if (booking.packagePurchaseId) {
+      if (booking.status === 'completed') return this.view(booking);
+      booking.status = 'completed';
+      booking.completedAt = new Date();
+      if (!booking.reviewToken) booking.reviewToken = randomToken(24);
+      booking.history.push({ status: 'completed', at: new Date(), by: userId, note: `Package ${booking.packageCode}` });
+      await booking.save();
+      return this.view(booking);
+    }
     if (booking.status === 'completed' && booking.saleId) return this.view(booking);
     if (!booking.customerId) throw new BadRequestException('This booking has no customer record.');
     const session = await this.connection.startSession();
@@ -673,6 +708,10 @@ export class BookingsService {
       endAt: booking.endAt,
       durationMinutes: booking.durationMinutes,
       capacity: booking.capacity || 1,
+      packagePurchaseId: booking.packagePurchaseId,
+      packageCode: booking.packageCode,
+      packageName: booking.packageName,
+      packageValueKobo: booking.packageValueKobo || 0,
       timezone: booking.timezone,
       addOns: booking.addOns,
       status: booking.status,

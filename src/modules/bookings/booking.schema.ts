@@ -105,6 +105,18 @@ export class Booking {
   @Prop({ type: Number, default: 1 })
   capacity: number;
 
+  @Prop({ type: String, default: null, index: true })
+  packagePurchaseId: string | null;
+
+  @Prop({ type: String, default: null })
+  packageCode: string | null;
+
+  @Prop({ type: String, default: null })
+  packageName: string | null;
+
+  @Prop({ type: Number, default: 0 })
+  packageValueKobo: number;
+
   @Prop({ type: Number, default: 0 })
   bufferBeforeMinutes: number;
 

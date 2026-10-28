@@ -5,6 +5,7 @@ import { Business, BusinessDocument } from '../businesses/business.schema';
 import { Provider, ProviderDocument } from '../providers/provider.schema';
 import { Service, ServiceDocument } from '../services/service.schema';
 import { Booking, BookingDocument } from './booking.schema';
+import { CalendarService } from '../calendar/calendar.service';
 import {
   addMinutes, businessDefaultSchedule, isValidLocalDate, localDateKey, minutesFromTime,
   timeFromMinutes, timeOffContains, weekdayForDate, zonedDate,
@@ -24,6 +25,7 @@ export class AvailabilityService {
     @InjectModel(Service.name) private readonly services: Model<ServiceDocument>,
     @InjectModel(Provider.name) private readonly providers: Model<ProviderDocument>,
     @InjectModel(Booking.name) private readonly bookings: Model<BookingDocument>,
+    private readonly calendarSync: CalendarService,
   ) {}
 
   async forService(businessId: string, serviceId: string, date: string, providerId?: string, durationOverride?: number, options?: { ignoreWindow?: boolean }) {
@@ -70,6 +72,7 @@ export class AvailabilityService {
       blockEndAt: { $gt: dayStart },
     }).lean().exec();
 
+    const externalBusy = await this.calendarSync.busyForDay(businessId, dayStart, dayEnd).catch(() => []);
     const slots = new Map<string, { startAt: string; endAt: string; time: string; providers: SlotProvider[] }>();
     for (const provider of allProviders) {
       const scheduled = (provider.weeklySchedule?.length ? provider.weeklySchedule : defaultSchedule)
@@ -89,6 +92,7 @@ export class AvailabilityService {
 
         if (schedule.breaks?.some((b) => cursor < minutesFromTime(b.end) && cursor + duration > minutesFromTime(b.start))) continue;
         if (timeOffContains(blockStartAt, blockEndAt, provider.timeOff || [])) continue;
+        if (externalBusy.some((busy) => new Date(busy.startAt) < blockEndAt && new Date(busy.endAt) > blockStartAt)) continue;
 
         const conflicts = existing.filter((b) =>
           String(b.providerId) === String(provider._id) &&

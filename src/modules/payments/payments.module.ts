@@ -14,6 +14,11 @@ import { User, UserSchema } from '../users/user.schema';
 import { Subscription, SubscriptionSchema } from '../plans/subscription.schema';
 import { Coupon, CouponSchema } from '../plans/coupon.schema';
 import { Booking, BookingSchema } from '../bookings/booking.schema';
+import { PackagePurchase, PackagePurchaseSchema } from '../packages/package.schema';
+import { Sale, SaleSchema } from '../sales/sale.schema';
+import { Counter, CounterSchema } from '../plans/counter.schema';
+import { Customer, CustomerSchema } from '../customers/customer.schema';
+import { ReceiptsModule } from '../receipts/receipts.module';
 import { OrdersModule } from '../orders/orders.module';
 import { DebtsModule } from '../debts/debts.module';
 import { AffiliatesModule } from '../affiliates/affiliates.module';
@@ -32,10 +37,15 @@ import { AffiliatesModule } from '../affiliates/affiliates.module';
       { name: Subscription.name, schema: SubscriptionSchema },
       { name: Coupon.name, schema: CouponSchema },
       { name: Booking.name, schema: BookingSchema },
+      { name: PackagePurchase.name, schema: PackagePurchaseSchema },
+      { name: Sale.name, schema: SaleSchema },
+      { name: Counter.name, schema: CounterSchema },
+      { name: Customer.name, schema: CustomerSchema },
     ]),
     OrdersModule,
     DebtsModule,
     AffiliatesModule,
+    ReceiptsModule,
   ],
   controllers: [PaymentsController],
   providers: [PaymentsService, PaystackService],

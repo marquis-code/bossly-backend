@@ -49,6 +49,12 @@ export class RegisterDto {
   @MaxLength(20)
   phone?: string;
 
+  @ApiPropertyOptional({ example: 'UNILAG' })
+  @IsString()
+  @IsOptional()
+  @MaxLength(20)
+  campus?: string;
+
   @ApiPropertyOptional({ example: 'LAG-REF-123' })
   @IsString()
   @IsOptional()

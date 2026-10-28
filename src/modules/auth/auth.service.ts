@@ -12,6 +12,7 @@ import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import * as bcrypt from 'bcryptjs';
 import { Connection, Model } from 'mongoose';
 import { randomToken, sha256 } from '../../common/utils/tokens';
+import { campusByCode } from '../campus/campus.constants';
 import { makeSlug, uniqueSuffix } from '../../common/utils/slug';
 import { normalizeNigerianPhone } from '../../common/utils/phone';
 import type { BusinessRole, JwtPayload, PlatformRole } from '../../common/types/auth.types';
@@ -96,6 +97,7 @@ export class AuthService {
     const passwordHash = await bcrypt.hash(dto.password, 12);
     const phone = dto.phone ? normalizeNigerianPhone(dto.phone) : null;
     if (dto.phone && !phone) throw new BadRequestException('Enter a valid Nigerian phone number.');
+    const campus = campusByCode(dto.campus);
 
     const baseSlug = makeSlug(dto.businessName);
     let slug = baseSlug;
@@ -139,6 +141,8 @@ export class AuthService {
               embedKey: randomToken(12),
               seoTitle: `${dto.businessName} — shop online`,
               seoDescription: `Shop from ${dto.businessName} on Ojaly.`,
+              campusCode: campus?.code || null,
+              campusName: campus?.name || null,
             },
           ],
           { session },

@@ -16,6 +16,7 @@ import { DebtsService } from '../modules/debts/debts.service';
 import { Product, ProductDocument } from '../modules/products/product.schema';
 import { Provider, ProviderDocument } from '../modules/providers/provider.schema';
 import { Service, ServiceDocument } from '../modules/services/service.schema';
+import { ServicePackage, ServicePackageDocument } from '../modules/packages/package.schema';
 import { BookingsService } from '../modules/bookings/bookings.service';
 import { defaultBookingSettings } from '../modules/businesses/business.schema';
 import { Membership, MembershipDocument } from '../modules/memberships/membership.schema';
@@ -29,6 +30,7 @@ async function seed(): Promise<void> {
   const providerModel = app.get<Model<ProviderDocument>>(getModelToken(Provider.name));
   const serviceModel = app.get<Model<ServiceDocument>>(getModelToken(Service.name));
   const bookings = app.get(BookingsService);
+  const packageModel = app.get<Model<ServicePackageDocument>>(getModelToken(ServicePackage.name));
   const memberships = app.get<Model<MembershipDocument>>(getModelToken(Membership.name));
   const businesses = app.get<Model<BusinessDocument>>(getModelToken(Business.name));
   const plans = app.get(PlansService);
@@ -242,6 +244,11 @@ async function seed(): Promise<void> {
           { businessId: business._id.toString(), name: 'Glow Facial', category: 'Skin', description: 'Deep cleanse, gentle exfoliation and hydration for Lagos skin.', durationMinutes: 60, bufferAfterMinutes: 15, priceKobo: 2000000, depositKobo: 400000, requiresDeposit: true, providerIds: [String(providers[1]._id)], color: '#FF7A59', sortOrder: 4 },
           { businessId: business._id.toString(), name: 'Bridal Glam', category: 'Makeup', description: 'Trial-ready bridal makeup with lashes and touch-up kit.', durationMinutes: 180, bufferBeforeMinutes: 30, priceKobo: 6000000, depositKobo: 1500000, requiresDeposit: true, providerIds: [String(providers[2]._id)], color: '#2F7D6D', sortOrder: 5 },
         ]);
+        await packageModel.create({
+          businessId: business._id.toString(), name: '3 Gel Manicures', description: 'Three gel manicures, valid for 60 days.',
+          serviceId: String(services[2]._id), serviceName: services[2].name, sessions: 3,
+          priceKobo: 2000000, validityDays: 60, isMembership: true,
+        });
         const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1); tomorrow.setHours(10, 0, 0, 0);
         await bookings.create(demoUser._id.toString(), business._id.toString(), {
           serviceId: String(services[0]._id), providerId: String(providers[0]._id), startAt: tomorrow.toISOString(),

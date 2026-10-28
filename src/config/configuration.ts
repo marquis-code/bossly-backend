@@ -23,6 +23,15 @@ export interface AppConfig {
   resend: { apiKey?: string; from: string; replyTo?: string };
   paystack: { secretKey?: string; publicKey?: string; webhookSecret?: string };
   sms: { provider: string; apiKey?: string; senderId?: string; baseUrl: string };
+  calendar: {
+    googleClientId?: string;
+    googleClientSecret?: string;
+    googleRedirectUri?: string;
+    outlookClientId?: string;
+    outlookClientSecret?: string;
+    outlookRedirectUri?: string;
+    tokenSecret: string;
+  };
   whatsapp: {
     provider?: string;
     phoneNumberId?: string;
@@ -98,6 +107,15 @@ export default (): AppConfig => {
     secretKey: process.env.PAYSTACK_SECRET_KEY,
     publicKey: process.env.PAYSTACK_PUBLIC_KEY,
     webhookSecret: process.env.PAYSTACK_WEBHOOK_SECRET,
+  },
+  calendar: {
+    googleClientId: process.env.GOOGLE_CALENDAR_CLIENT_ID,
+    googleClientSecret: process.env.GOOGLE_CALENDAR_CLIENT_SECRET,
+    googleRedirectUri: process.env.GOOGLE_CALENDAR_REDIRECT_URI,
+    outlookClientId: process.env.OUTLOOK_CALENDAR_CLIENT_ID,
+    outlookClientSecret: process.env.OUTLOOK_CALENDAR_CLIENT_SECRET,
+    outlookRedirectUri: process.env.OUTLOOK_CALENDAR_REDIRECT_URI,
+    tokenSecret: process.env.CALENDAR_TOKEN_SECRET || process.env.JWT_ACCESS_SECRET || 'ojaly-calendar-token-secret',
   },
   sms: {
     provider: process.env.SMS_PROVIDER || 'termii',

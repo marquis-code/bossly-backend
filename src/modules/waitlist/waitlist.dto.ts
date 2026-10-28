@@ -39,6 +39,11 @@ export class CreateWaitlistDto {
   @IsISO8601()
   preferredTo: string;
 
+  @ApiPropertyOptional({ description: 'Specific class/session time the customer wants' })
+  @IsISO8601()
+  @IsOptional()
+  preferredStartAt?: string;
+
   @ApiPropertyOptional()
   @IsString()
   @IsOptional()

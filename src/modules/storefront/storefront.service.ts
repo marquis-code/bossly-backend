@@ -13,6 +13,8 @@ import { ProvidersService } from '../providers/providers.service';
 import { BookingsService } from '../bookings/bookings.service';
 import { WaitlistService } from '../waitlist/waitlist.service';
 import { ReviewsService } from '../reviews/reviews.service';
+import { PackagesService } from '../packages/packages.service';
+import type { PackageCheckoutDto } from '../packages/package.dto';
 import { CreateWaitlistDto } from '../waitlist/waitlist.dto';
 import { AvailabilityService } from '../bookings/availability.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -43,6 +45,7 @@ export class StorefrontService {
     private readonly bookings: BookingsService,
     private readonly waitlist: WaitlistService,
     private readonly reviews: ReviewsService,
+    private readonly packages: PackagesService,
     private readonly availability: AvailabilityService,
     private readonly config: ConfigService,
   ) {}
@@ -81,18 +84,30 @@ export class StorefrontService {
 
   async serviceDetail(slug: string, id: string) {
     const business = await this.requireBusiness({ slug: slug.toLowerCase() });
-    const [service, providers, reviews] = await Promise.all([
+    const [service, providers, reviews, packages] = await Promise.all([
       this.services.publicOne(business._id.toString(), id),
       this.providers.publicList(business._id.toString()),
       this.reviews.publishedForBusiness(business._id.toString(), id),
+      this.packages.publicList(business._id.toString(), id),
     ]);
     const eligible = providers.filter((p) => !service.providerIds?.length || service.providerIds.includes(p.id));
-    return { business: this.publicBusiness(business), template: getTemplate(business.templateKey), service, providers: eligible, reviews };
+    return { business: this.publicBusiness(business), template: getTemplate(business.templateKey), service, providers: eligible, reviews, packages };
   }
 
   async availabilityForService(slug: string, query: { serviceId: string; date: string; providerId?: string; durationMinutes?: number }) {
     const business = await this.requireBusiness({ slug: slug.toLowerCase() });
     return this.availability.forService(business._id.toString(), query.serviceId, query.date, query.providerId, query.durationMinutes);
+  }
+
+  async packagesList(slug: string) {
+    const business = await this.requireBusiness({ slug: slug.toLowerCase() });
+    return { business: this.publicBusiness(business), template: getTemplate(business.templateKey), items: await this.packages.publicList(business._id.toString()) };
+  }
+
+  async packageCheckout(slug: string, packageId: string, dto: PackageCheckoutDto) {
+    const business = await this.requireBusiness({ slug: slug.toLowerCase() });
+    const result = await this.packages.checkout(business._id.toString(), packageId, dto);
+    return { ...result, business: this.publicBusiness(business) };
   }
 
   async joinWaitlist(slug: string, dto: CreateWaitlistDto) {
