@@ -123,12 +123,12 @@ export function emailLayout(opts: EmailLayoutOptions): string {
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
               <tr>
                 <td>
-                  <a href="https://bossly.ng" target="_blank" style="text-decoration:none;display:inline-flex;align-items:center;">
+                  <a href="https://ojaly.ng" target="_blank" style="text-decoration:none;display:inline-flex;align-items:center;">
                     <table role="presentation" cellpadding="0" cellspacing="0">
                       <tr>
                         <td style="background-color:${BRAND.orange};width:14px;height:14px;border-radius:4px;vertical-align:middle;"></td>
                         <td style="padding-left:10px;color:${BRAND.white};font-size:24px;font-weight:800;letter-spacing:-0.5px;font-family:-apple-system,BlinkMacSystemFont,'Space Grotesk',Arial,sans-serif;vertical-align:middle;">
-                          bossly
+                          ojaly
                         </td>
                       </tr>
                     </table>
@@ -178,7 +178,7 @@ export function emailLayout(opts: EmailLayoutOptions): string {
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:14px;">
                 <tr>
                   <td style="color:${BRAND.muted};font-size:12px;line-height:1.5;">
-                    <strong style="color:${BRAND.ink};">Bossly</strong> &middot; Empowering student & retail entrepreneurs across Nigeria.<br>
+                    <strong style="color:${BRAND.ink};">Ojaly</strong> &middot; Empowering student & retail entrepreneurs across Nigeria.<br>
                     Need quick assistance? Reply directly to this email or chat on WhatsApp.
                   </td>
                 </tr>
@@ -192,7 +192,7 @@ export function emailLayout(opts: EmailLayoutOptions): string {
       <table role="presentation" cellpadding="0" cellspacing="0" style="max-width:580px;width:100%;margin-top:16px;">
         <tr>
           <td align="center" style="color:${BRAND.mutedLight};font-size:11px;line-height:1.5;">
-            You received this notification because your business is registered on Bossly.<br>
+            You received this notification because your business is registered on Ojaly.<br>
             Manage summary preferences in <strong>Settings &rarr; Summaries</strong>.
           </td>
         </tr>
@@ -212,15 +212,15 @@ export function welcomeEmail(name: string, businessName: string, url: string): {
   return {
     subject: `Your business is live, ${firstName} 🚀`,
     html: emailLayout({
-      title: `You're the boss now.`,
-      preheader: `${businessName} is officially registered and live on Bossly.`,
+      title: `You're all set.`,
+      preheader: `${businessName} is officially registered and live on Ojaly.`,
       badge: { text: 'Welcome aboard', tone: 'orange' },
       body: `<p style="margin-top:0;">Hi ${escapeHtml(firstName)},</p>
-      <p><strong>${escapeHtml(businessName)}</strong> is now officially active on Bossly. From today, every sale you record calculates your true gross profit, tracks what goods cost you, and watches customer debts automatically.</p>
+      <p><strong>${escapeHtml(businessName)}</strong> is now officially active on Ojaly. From today, every sale you record calculates your true gross profit, tracks what goods cost you, and watches customer debts automatically.</p>
       
       <div style="background-color:${BRAND.forestSoft};border-left:4px solid ${BRAND.forest};border-radius:12px;padding:16px 18px;margin:22px 0;">
         <div style="font-weight:700;color:${BRAND.forest};font-size:14px;">✨ Your free online storefront is ready</div>
-        <div style="font-size:13px;color:#184232;margin-top:4px;">Add products with photos and prices &mdash; Bossly generates a fast, shareable website link for your WhatsApp bio.</div>
+        <div style="font-size:13px;color:#184232;margin-top:4px;">Add products with photos and prices &mdash; Ojaly generates a fast, shareable website link for your WhatsApp bio.</div>
       </div>
 
       <p style="font-weight:700;color:${BRAND.ink};margin:22px 0 10px;">Your first 3 steps to take control:</p>
@@ -247,15 +247,15 @@ export function welcomeEmail(name: string, businessName: string, url: string): {
 export function verificationEmail(name: string, url: string): { subject: string; html: string } {
   const firstName = name.split(' ')[0] || 'there';
   return {
-    subject: 'Confirm your Bossly account email',
+    subject: 'Confirm your Ojaly account email',
     html: emailLayout({
       title: 'One quick tap to verify',
-      preheader: 'Please confirm your email address to secure your Bossly account.',
+      preheader: 'Please confirm your email address to secure your Ojaly account.',
       badge: { text: 'Account Security', tone: 'green' },
       body: `<p style="margin-top:0;">Hi ${escapeHtml(firstName)},</p>
-      <p>Thank you for setting up your business account on Bossly. Tap the button below to confirm that this email address belongs to you.</p>
+      <p>Thank you for setting up your business account on Ojaly. Tap the button below to confirm that this email address belongs to you.</p>
       <div style="background-color:${BRAND.cream};border-radius:12px;padding:14px 16px;margin:20px 0;font-size:13px;color:${BRAND.muted};">
-        This secure verification link is valid for <strong>24 hours</strong>. If you did not create a Bossly account, you can safely ignore this message.
+        This secure verification link is valid for <strong>24 hours</strong>. If you did not create a Ojaly account, you can safely ignore this message.
       </div>`,
       button: { label: 'Confirm my email', url },
       footerNote: 'For security reasons, never forward this verification link to anyone.',
@@ -266,18 +266,18 @@ export function verificationEmail(name: string, url: string): { subject: string;
 export function resetPasswordEmail(name: string, url: string): { subject: string; html: string } {
   const firstName = name.split(' ')[0] || 'there';
   return {
-    subject: 'Reset your Bossly password',
+    subject: 'Reset your Ojaly password',
     html: emailLayout({
       title: 'Reset your password',
-      preheader: 'Use this secure link to set a new password for your Bossly account.',
+      preheader: 'Use this secure link to set a new password for your Ojaly account.',
       badge: { text: 'Security Request', tone: 'orange' },
       body: `<p style="margin-top:0;">Hi ${escapeHtml(firstName)},</p>
-      <p>We received a request to reset the password for your Bossly account. Tap the button below to select a new password.</p>
+      <p>We received a request to reset the password for your Ojaly account. Tap the button below to select a new password.</p>
       <div style="background-color:${BRAND.cream};border-radius:12px;padding:14px 16px;margin:20px 0;font-size:13px;color:${BRAND.muted};">
         This link expires in <strong>1 hour</strong>. If you did not initiate this request, your password remains unchanged and you can safely ignore this email.
       </div>`,
       button: { label: 'Choose new password', url },
-      footerNote: 'Bossly will never ask you for your password via email, SMS, or WhatsApp.',
+      footerNote: 'Ojaly will never ask you for your password via email, SMS, or WhatsApp.',
     }),
   };
 }
@@ -285,13 +285,13 @@ export function resetPasswordEmail(name: string, url: string): { subject: string
 export function staffInviteEmail(name: string, businessName: string, inviterName: string, url: string): { subject: string; html: string } {
   const firstName = name.split(' ')[0] || 'there';
   return {
-    subject: `${inviterName} invited you to join ${businessName} on Bossly`,
+    subject: `${inviterName} invited you to join ${businessName} on Ojaly`,
     html: emailLayout({
       title: `You're invited to ${businessName}`,
-      preheader: `${inviterName} has invited you to help manage ${businessName} on Bossly.`,
+      preheader: `${inviterName} has invited you to help manage ${businessName} on Ojaly.`,
       badge: { text: 'Team Invitation', tone: 'green' },
       body: `<p style="margin-top:0;">Hi ${escapeHtml(firstName)},</p>
-      <p><strong>${escapeHtml(inviterName)}</strong> has added you as a team member for <strong>${escapeHtml(businessName)}</strong> on Bossly.</p>
+      <p><strong>${escapeHtml(inviterName)}</strong> has added you as a team member for <strong>${escapeHtml(businessName)}</strong> on Ojaly.</p>
       <p>As a staff member, you can help record sales, track inventory, and view customer orders based on the permissions configured by the business owner.</p>`,
       button: { label: 'Accept invite & set password', url },
       footerNote: 'If you were not expecting this invitation, you can ignore this email.',

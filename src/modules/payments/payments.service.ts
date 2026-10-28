@@ -606,6 +606,6 @@ export class PaymentsService {
   }
 
   private reference(prefix: string): string {
-    return `BOSS-${prefix.toUpperCase()}-${Date.now()}-${randomToken(4).toUpperCase()}`;
+    return `OJALY-${prefix.toUpperCase()}-${Date.now()}-${randomToken(4).toUpperCase()}`;
   }
 }

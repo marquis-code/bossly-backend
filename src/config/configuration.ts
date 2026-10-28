@@ -36,10 +36,10 @@ export interface AppConfig {
 
 export default (): AppConfig => {
   const isProd = (process.env.NODE_ENV || 'development') === 'production';
-  const defaultAppUrl = isProd ? 'https://bossly.ng' : 'http://localhost:3100';
-  const defaultAdminUrl = isProd ? 'https://admin.bossly.ng' : 'http://localhost:3101';
+  const defaultAppUrl = isProd ? 'https://ojaly.ng' : 'http://localhost:3100';
+  const defaultAdminUrl = isProd ? 'https://admin.ojaly.ng' : 'http://localhost:3101';
   const defaultApiUrl = isProd
-    ? (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}/api/v1` : 'https://api.bossly.ng/api/v1')
+    ? (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}/api/v1` : 'https://api.ojaly.ng/api/v1')
     : 'http://localhost:4100/api/v1';
   const defaultOrigins = isProd
     ? `${defaultAppUrl},${defaultAdminUrl},https://*.vercel.app,https://*.railway.app,https://*.onrender.com,http://localhost:3100,http://localhost:3101`
@@ -51,14 +51,14 @@ export default (): AppConfig => {
     appUrl: process.env.APP_URL || defaultAppUrl,
     adminUrl: process.env.ADMIN_URL || defaultAdminUrl,
     apiUrl: process.env.API_URL || defaultApiUrl,
-    publicRootDomain: process.env.PUBLIC_ROOT_DOMAIN || 'bossly.ng',
+    publicRootDomain: process.env.PUBLIC_ROOT_DOMAIN || 'ojaly.ng',
     allowedOrigins: (process.env.ALLOWED_ORIGINS || defaultOrigins)
       .split(',').map((s) => s.trim()).filter(Boolean),
-    mongodbUri: (process.env.MONGODB_URI || 'mongodb://localhost:27018/bossly?directConnection=true') as string,
+    mongodbUri: (process.env.MONGODB_URI || 'mongodb://localhost:27018/ojaly?directConnection=true') as string,
     redisUrl: process.env.REDIS_URL,
     jwt: {
-      accessSecret: (process.env.JWT_ACCESS_SECRET || 'bossly-default-access-secret-0123456789abcdef') as string,
-      refreshSecret: (process.env.JWT_REFRESH_SECRET || 'bossly-default-refresh-secret-fedcba9876543210') as string,
+      accessSecret: (process.env.JWT_ACCESS_SECRET || 'ojaly-default-access-secret-0123456789abcdef') as string,
+      refreshSecret: (process.env.JWT_REFRESH_SECRET || 'ojaly-default-refresh-secret-fedcba9876543210') as string,
       accessTtl: process.env.JWT_ACCESS_TTL || '15m',
       refreshTtl: process.env.JWT_REFRESH_TTL || '30d',
     },
@@ -66,12 +66,12 @@ export default (): AppConfig => {
     cloudName: process.env.CLOUDINARY_CLOUD_NAME,
     apiKey: process.env.CLOUDINARY_API_KEY,
     apiSecret: process.env.CLOUDINARY_API_SECRET,
-    folder: process.env.CLOUDINARY_FOLDER || 'bossly',
+    folder: process.env.CLOUDINARY_FOLDER || 'ojaly',
   },
   resend: {
     apiKey: process.env.RESEND_API_KEY,
-    from: process.env.MAIL_FROM || 'Bossly <hello@bossly.ng>',
-    replyTo: process.env.MAIL_REPLY_TO,
+    from: process.env.MAIL_FROM || 'Ojaly <hello@ojaly.ng>',
+    replyTo: process.env.MAIL_REPLY_TO || 'hello@ojaly.ng',
   },
   paystack: {
     secretKey: process.env.PAYSTACK_SECRET_KEY,
@@ -82,7 +82,7 @@ export default (): AppConfig => {
     phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID,
     businessAccountId: process.env.WHATSAPP_BUSINESS_ACCOUNT_ID,
     accessToken: process.env.WHATSAPP_ACCESS_TOKEN,
-    verifyToken: process.env.WHATSAPP_VERIFY_TOKEN || 'bossly-webhook-verify',
+    verifyToken: process.env.WHATSAPP_VERIFY_TOKEN || 'ojaly-webhook-verify',
     appSecret: process.env.WHATSAPP_APP_SECRET,
     platformNumber: process.env.WHATSAPP_PLATFORM_NUMBER,
   },

@@ -97,7 +97,7 @@ export class AlertsService {
           phone: contact.phone,
           text: message,
           template: {
-            name: 'bossly_low_stock',
+            name: 'ojaly_low_stock',
             language: 'en',
             params: [business.name, label, variant.quantity <= 0 ? '0' : String(variant.quantity)],
           },

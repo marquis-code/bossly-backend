@@ -14,7 +14,7 @@ export class HealthController {
     if (db !== 'up') {
       throw new ServiceUnavailableException({
         status: 'degraded',
-        service: 'bossly-api',
+        service: 'ojaly-api',
         db,
         uptime: Math.floor(process.uptime()),
         timestamp: new Date().toISOString(),
@@ -22,7 +22,7 @@ export class HealthController {
     }
     return {
       status: 'ok',
-      service: 'bossly-api',
+      service: 'ojaly-api',
       db,
       uptime: Math.floor(process.uptime()),
       timestamp: new Date().toISOString(),

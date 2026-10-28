@@ -89,12 +89,12 @@ export class JobsService {
           if (user?.email) {
             const mail = paymentFailedEmail(
               'your business',
-              'your Bossly trial',
+              'your Ojaly trial',
               `${this.config.get('appUrl')}/app/settings?tab=billing`,
             );
             void this.mail.send({
               to: user.email,
-              subject: 'Your Bossly trial ended — your data is safe',
+              subject: 'Your Ojaly trial ended — your data is safe',
               html: mail.html,
               template: 'trial_ended',
               businessId: sub.businessId,

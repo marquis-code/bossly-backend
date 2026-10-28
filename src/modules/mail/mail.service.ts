@@ -29,7 +29,7 @@ export class MailService {
     this.config = config;
     const key = config.get<string>('resend.apiKey');
     this.resend = key ? new Resend(key) : null;
-    this.from = config.get<string>('resend.from') || 'Bossly <hello@bossly.ng>';
+    this.from = config.get<string>('resend.from') || 'Ojaly <hello@ojaly.ng>';
   }
 
   get isConfigured(): boolean {

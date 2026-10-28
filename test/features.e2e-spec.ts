@@ -35,14 +35,14 @@ describe('Affiliates, admin tooling and impersonation (e2e)', () => {
     mongod = await MongoMemoryReplSet.create({ replSet: { count: 1, storageEngine: 'wiredTiger' } });
     Object.assign(process.env, {
       NODE_ENV: 'test',
-      MONGODB_URI: mongod.getUri('bossly-features-e2e'),
+      MONGODB_URI: mongod.getUri('ojaly-features-e2e'),
       JWT_ACCESS_SECRET: 'test-features-access-secret-0123456789012345',
       JWT_REFRESH_SECRET: 'test-features-refresh-secret-012345678901234',
       JWT_ACCESS_TTL: '15m',
       JWT_REFRESH_TTL: '30d',
       APP_URL: 'http://localhost:3100',
       API_URL: 'http://localhost:4100/api/v1',
-      PUBLIC_ROOT_DOMAIN: 'bossly.ng',
+      PUBLIC_ROOT_DOMAIN: 'ojaly.ng',
       ALLOWED_ORIGINS: 'http://localhost:3100',
       PAYSTACK_SECRET_KEY: 'sk_test_features',
       PAYSTACK_WEBHOOK_SECRET: paystackSecret,

@@ -173,7 +173,7 @@ export class SummariesService {
           phone: contact.phone,
           text: payload.text,
           template: {
-            name: payload.period === 'daily' ? 'bossly_daily_summary' : 'bossly_weekly_summary',
+            name: payload.period === 'daily' ? 'ojaly_daily_summary' : 'ojaly_weekly_summary',
             language: 'en',
             params: [
               business.name,

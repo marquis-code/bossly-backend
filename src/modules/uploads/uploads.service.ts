@@ -13,7 +13,7 @@ export class UploadsService {
     if (!cloudName || !apiKey || !apiSecret) {
       throw new ServiceUnavailableException('Image uploads are not configured yet. Add your Cloudinary keys.');
     }
-    const base = this.config.get<string>('cloudinary.folder') || 'bossly';
+    const base = this.config.get<string>('cloudinary.folder') || 'ojaly';
     const timestamp = Math.round(Date.now() / 1000);
     const folder = `${base}/${businessId}/${purpose}`;
     const isVideo = purpose === 'video';

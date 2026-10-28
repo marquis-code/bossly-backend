@@ -18,7 +18,7 @@ async function bootstrap(): Promise<void> {
   });
   const config = app.get(ConfigService);
   const allowed = config.get<string[]>('allowedOrigins') || [];
-  const rootDomain = config.get<string>('publicRootDomain') || 'bossly.ng';
+  const rootDomain = config.get<string>('publicRootDomain') || 'ojaly.ng';
   const businessModel = app.get<Model<BusinessDocument>>(getModelToken(Business.name));
   const customDomainCache = new Map<string, { allowed: boolean; expires: number }>();
   const matchesAllowedOrigin = (origin: string) => allowed.some((pattern) => {
@@ -79,7 +79,7 @@ async function bootstrap(): Promise<void> {
   app.enableShutdownHooks();
 
   const swaggerConfig = new DocumentBuilder()
-    .setTitle('Bossly API')
+    .setTitle('Ojaly API')
     .setDescription(
       'Business management and auto-generated storefronts for Nigerian student entrepreneurs. All money values are integer kobo (₦1 = 100 kobo). Send the JWT as a Bearer token.',
     )
@@ -89,7 +89,7 @@ async function bootstrap(): Promise<void> {
     .build();
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('docs', app, document, {
-    customSiteTitle: 'Bossly API Docs',
+    customSiteTitle: 'Ojaly API Docs',
     swaggerOptions: { persistAuthorization: true, displayRequestDuration: true },
   });
 
@@ -109,7 +109,7 @@ async function bootstrap(): Promise<void> {
       // eslint-disable-next-line no-console
       console.warn(`[config] Production integrations not configured: ${missing.join(', ')}`);
     }
-    if (config.get('whatsapp.verifyToken') === 'bossly-webhook-verify') {
+    if (config.get('whatsapp.verifyToken') === 'ojaly-webhook-verify') {
       // eslint-disable-next-line no-console
       console.warn('[config] WHATSAPP_VERIFY_TOKEN is still the development default.');
     }
@@ -118,6 +118,6 @@ async function bootstrap(): Promise<void> {
   const port = Number(config.get('port') || 4100);
   await app.listen(port, '0.0.0.0');
   // eslint-disable-next-line no-console
-  console.log(`Bossly API on http://localhost:${port}/api/v1 · docs http://localhost:${port}/docs`);
+  console.log(`Ojaly API on http://localhost:${port}/api/v1 · docs http://localhost:${port}/docs`);
 }
 void bootstrap();

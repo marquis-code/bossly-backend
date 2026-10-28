@@ -50,10 +50,10 @@ export class WhatsappSettingsController {
         alertsOptOut: c.alertsOptOut,
       })),
       templates: [
-        { name: 'bossly_daily_summary', params: 7, description: 'Business name, revenue, profit, expenses, new debts, low stock count, top product' },
-        { name: 'bossly_weekly_summary', params: 7, description: 'Same as daily summary, sent weekly' },
-        { name: 'bossly_low_stock', params: 3, description: 'Business name, product, remaining quantity' },
-        { name: 'bossly_debt_reminder', params: 4, description: 'Business name, customer, amount, due date (for approved customer reminders)' },
+        { name: 'ojaly_daily_summary', params: 7, description: 'Business name, revenue, profit, expenses, new debts, low stock count, top product' },
+        { name: 'ojaly_weekly_summary', params: 7, description: 'Same as daily summary, sent weekly' },
+        { name: 'ojaly_low_stock', params: 3, description: 'Business name, product, remaining quantity' },
+        { name: 'ojaly_debt_reminder', params: 4, description: 'Business name, customer, amount, due date (for approved customer reminders)' },
       ],
       webhookUrl: `${this.config.get('apiUrl')}/whatsapp/webhook`,
     };
@@ -110,7 +110,7 @@ export class WhatsappSettingsController {
     const result = await this.client.send({
       businessId,
       phone: contact.phone,
-      text: '✅ Bossly WhatsApp is connected. Send HELP to see what you can do.',
+      text: '✅ Ojaly WhatsApp is connected. Send HELP to see what you can do.',
     });
     return { sent: result.sent, usedTemplate: result.usedTemplate, reason: result.reason };
   }

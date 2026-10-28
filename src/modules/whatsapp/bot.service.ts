@@ -43,7 +43,7 @@ interface LastUndo {
   saleNumber: string;
 }
 
-const HELP_TEXT = `*Bossly WhatsApp commands*
+const HELP_TEXT = `*Ojaly WhatsApp commands*
 
 Record a sale:
 _sold 3 shirts 5000, Tola owes 2000_
@@ -99,11 +99,11 @@ export class BotService {
 
     let contact = await this.contacts.findOne({ phone }).exec();
     if (!contact) {
-      await this.whatsapp.sendTextDirect('', phone, 'This number is not linked to a Bossly business yet. Open Bossly → Settings → WhatsApp to get a 6-digit link code.');
+      await this.whatsapp.sendTextDirect('', phone, 'This number is not linked to a Ojaly business yet. Open Ojaly → Settings → WhatsApp to get a 6-digit link code.');
       return;
     }
     if (!contact.verifiedAt || !contact.businessId) {
-      await this.whatsapp.sendTextDirect(contact.businessId || '', phone, 'This number is not linked yet. Open Bossly → Settings → WhatsApp, tap “Get code”, then send *LINK 123456* here.');
+      await this.whatsapp.sendTextDirect(contact.businessId || '', phone, 'This number is not linked yet. Open Ojaly → Settings → WhatsApp, tap “Get code”, then send *LINK 123456* here.');
       return;
     }
 
@@ -169,7 +169,7 @@ export class BotService {
   private async linkPhone(phone: string, code: string, displayName?: string): Promise<void> {
     const contact = await this.contacts.findOne({ phone }).exec();
     if (contact && contact.failedAttempts >= 5) {
-      await this.whatsapp.sendTextDirect(contact.businessId || '', phone, 'Too many incorrect codes. Get a fresh code from Bossly → Settings → WhatsApp.');
+      await this.whatsapp.sendTextDirect(contact.businessId || '', phone, 'Too many incorrect codes. Get a fresh code from Ojaly → Settings → WhatsApp.');
       return;
     }
     const codeHash = sha256(code);
@@ -180,7 +180,7 @@ export class BotService {
     }).sort({ createdAt: -1 }).exec();
     if (!otp) {
       await this.contacts.updateOne({ phone }, { $inc: { failedAttempts: 1 } }, { upsert: true }).exec();
-      await this.whatsapp.sendTextDirect('', phone, 'That code is incorrect or expired. Open Bossly → Settings → WhatsApp and generate a new one.');
+      await this.whatsapp.sendTextDirect('', phone, 'That code is incorrect or expired. Open Ojaly → Settings → WhatsApp and generate a new one.');
       return;
     }
     otp.consumedAt = new Date();
@@ -241,11 +241,11 @@ export class BotService {
       }
       if (!draft.items.length) {
         const names = catalog.slice(0, 5).map((p) => p.name).join(', ');
-        await this.reply(contact, `I couldn't find a product in that message.\n\n${draft.unmatched.length ? `Unmatched: ${draft.unmatched.map((u) => u.phrase).join(', ')}\n\n` : ''}Try:\n_sold 2 ${catalog[0]?.name || 'shirts'} 5000, Tola owes 2000_\n\n${names ? `In your catalogue: ${names}` : 'Add a product on Bossly first.'}\n\nReply HELP for examples.`);
+        await this.reply(contact, `I couldn't find a product in that message.\n\n${draft.unmatched.length ? `Unmatched: ${draft.unmatched.map((u) => u.phrase).join(', ')}\n\n` : ''}Try:\n_sold 2 ${catalog[0]?.name || 'shirts'} 5000, Tola owes 2000_\n\n${names ? `In your catalogue: ${names}` : 'Add a product on Ojaly first.'}\n\nReply HELP for examples.`);
         return;
       }
       if (draft.unmatched.length) {
-        await this.reply(contact, `I found ${draft.items.length} item${draft.items.length === 1 ? '' : 's'}, but I couldn't match:\n${draft.unmatched.map((u) => `• ${u.quantity} × ${u.phrase}`).join('\n')}\n\nAdd those products in Bossly (or use the exact product name), then send the message again. I have not saved anything.`);
+        await this.reply(contact, `I found ${draft.items.length} item${draft.items.length === 1 ? '' : 's'}, but I couldn't match:\n${draft.unmatched.map((u) => `• ${u.quantity} × ${u.phrase}`).join('\n')}\n\nAdd those products in Ojaly (or use the exact product name), then send the message again. I have not saved anything.`);
         return;
       }
       if (!draft.customerPhone && !draft.customerName) {
@@ -363,7 +363,7 @@ export class BotService {
       return;
     }
     if (Date.now() - new Date(undo.at).getTime() > 15 * 60 * 1000) {
-      await this.reply(contact, 'That undo window has passed (15 minutes). Open the sale on Bossly to correct it.');
+      await this.reply(contact, 'That undo window has passed (15 minutes). Open the sale on Ojaly to correct it.');
       return;
     }
     try {
@@ -425,7 +425,7 @@ export class BotService {
         recurrence: 'none',
       });
       const label = category.replace('_', ' ');
-      await this.reply(contact, `✅ *Expense recorded*\n\n${formatNaira(amountKobo)} · ${label}${note ? `\n${note}` : ''}\n\nYour daily summary now includes this cost. Open Bossly: ${this.config.get('appUrl')}/app/expenses`);
+      await this.reply(contact, `✅ *Expense recorded*\n\n${formatNaira(amountKobo)} · ${label}${note ? `\n${note}` : ''}\n\nYour daily summary now includes this cost. Open Ojaly: ${this.config.get('appUrl')}/app/expenses`);
     } catch (error) {
       await this.reply(contact, `I couldn't save that expense: ${error instanceof Error ? error.message : 'unknown error'}.`);
     }

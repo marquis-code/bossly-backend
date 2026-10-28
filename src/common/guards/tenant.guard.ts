@@ -43,7 +43,7 @@ export class TenantGuard implements CanActivate {
     }
     const business = await this.businesses.findOne({ _id: user.businessId, isSuspended: false }).lean().exec();
     if (!business) {
-      throw new ForbiddenException('This business is suspended. Contact Bossly support.');
+      throw new ForbiddenException('This business is suspended. Contact Ojaly support.');
     }
     const role = membership.role as BusinessRole;
     user.role = role;

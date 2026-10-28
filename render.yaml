@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: bossly-backend
+    name: ojaly-backend
     env: node
     plan: free
     buildCommand: npm install && npm run build

@@ -523,7 +523,7 @@ export class AdminService {
       webhookUrl: `${this.config.get('apiUrl')}/whatsapp/webhook`,
       ...data,
       recentFailures,
-      templates: ['bossly_daily_summary', 'bossly_weekly_summary', 'bossly_low_stock', 'bossly_debt_reminder'],
+      templates: ['ojaly_daily_summary', 'ojaly_weekly_summary', 'ojaly_low_stock', 'ojaly_debt_reminder'],
     };
   }
 
@@ -600,7 +600,7 @@ export class AdminService {
       targetType: dto.targetType,
       targetId: dto.targetId,
       authorId: actorId,
-      authorName: author?.name || 'Bossly admin',
+      authorName: author?.name || 'Ojaly admin',
       body: dto.body.trim(),
       pinned: Boolean(dto.pinned),
     });

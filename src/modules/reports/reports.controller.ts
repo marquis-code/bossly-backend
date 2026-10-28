@@ -34,7 +34,7 @@ export class ReportsController {
   async pdf(@CurrentBusiness() businessId: string, @Query() query: ReportQueryDto, @Res() res: Response) {
     const buffer = await this.reports.exportPdf(businessId, query);
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="bossly-report-${new Date().toISOString().slice(0, 10)}.pdf"`);
+    res.setHeader('Content-Disposition', `attachment; filename="ojaly-report-${new Date().toISOString().slice(0, 10)}.pdf"`);
     res.send(buffer);
   }
 }

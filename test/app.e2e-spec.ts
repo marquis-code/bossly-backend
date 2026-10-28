@@ -12,12 +12,12 @@ import { Payment, PaymentDocument } from '../src/modules/payments/payment.schema
 import { Order, OrderDocument } from '../src/modules/orders/order.schema';
 import { WhatsappMessage, WhatsappMessageDocument } from '../src/modules/whatsapp/whatsapp-message.schema';
 
-describe('Bossly API (e2e)', () => {
+describe('Ojaly API (e2e)', () => {
   let app: INestApplication;
   let mongod: MongoMemoryReplSet;
   let http: ReturnType<typeof request>;
   const run = randomUUID().slice(0, 8);
-  const paystackWebhookSecret = 'whsec_bossly_e2e_secret';
+  const paystackWebhookSecret = 'whsec_ojaly_e2e_secret';
 
   const registered: Array<{ token: string; refreshToken: string; businessId: string; email: string; slug: string }> = [];
 
@@ -29,7 +29,7 @@ describe('Bossly API (e2e)', () => {
       if (binary) process.env.MONGOMS_SYSTEM_BINARY = join(cachedDir, binary);
     }
     mongod = await MongoMemoryReplSet.create({ replSet: { count: 1, storageEngine: 'wiredTiger' } });
-    const uri = mongod.getUri('bossly-e2e');
+    const uri = mongod.getUri('ojaly-e2e');
     Object.assign(process.env, {
       NODE_ENV: 'test',
       PORT: '0',
@@ -40,9 +40,9 @@ describe('Bossly API (e2e)', () => {
       JWT_REFRESH_TTL: '30d',
       APP_URL: 'http://localhost:3100',
       API_URL: 'http://localhost:4100/api/v1',
-      PUBLIC_ROOT_DOMAIN: 'bossly.ng',
+      PUBLIC_ROOT_DOMAIN: 'ojaly.ng',
       ALLOWED_ORIGINS: 'http://localhost:3100',
-      PAYSTACK_SECRET_KEY: 'sk_test_bossly_e2e',
+      PAYSTACK_SECRET_KEY: 'sk_test_ojaly_e2e',
       PAYSTACK_WEBHOOK_SECRET: paystackWebhookSecret,
       WHATSAPP_VERIFY_TOKEN: 'verify-e2e',
       WHATSAPP_APP_SECRET: 'whatsapp-e2e-secret',
@@ -280,7 +280,7 @@ describe('Bossly API (e2e)', () => {
       const lowYes = await whatsappWebhook('YES');
       expect(lowYes.status).toBe(200);
       await new Promise((resolve) => setTimeout(resolve, 350));
-      const lowStockMessages = await whatsappMessages.find({ businessId: account.businessId, templateName: 'bossly_low_stock' }).lean().exec();
+      const lowStockMessages = await whatsappMessages.find({ businessId: account.businessId, templateName: 'ojaly_low_stock' }).lean().exec();
       expect(lowStockMessages).toHaveLength(1);
       expect(lowStockMessages[0].body).toContain('Low stock');
     }, 30000);

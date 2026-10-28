@@ -138,7 +138,7 @@ export class AuthService {
               whatsappNumber: phone,
               embedKey: randomToken(12),
               seoTitle: `${dto.businessName} — shop online`,
-              seoDescription: `Shop from ${dto.businessName} on Bossly.`,
+              seoDescription: `Shop from ${dto.businessName} on Ojaly.`,
             },
           ],
           { session },

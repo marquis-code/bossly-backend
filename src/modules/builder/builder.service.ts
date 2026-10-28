@@ -44,7 +44,7 @@ export class BuilderService {
         path: `/s/${business.slug}`,
         subdomain: `${business.slug}.${this.config.get('publicRootDomain')}`,
         customDomain: business.customDomain,
-        embedScript: `<script src="${this.config.get('appUrl')}/embed/bossly-widget.js" data-bossly="${business.slug}" data-mode="button" async></script>`,
+        embedScript: `<script src="${this.config.get('appUrl')}/embed/ojaly-widget.js" data-ojaly="${business.slug}" data-mode="button" async></script>`,
         orderLink: `${this.config.get('appUrl')}/s/${business.slug}`,
         embedKey: business.embedKey,
       },

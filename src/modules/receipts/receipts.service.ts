@@ -297,7 +297,7 @@ export class ReceiptsService {
 
       doc.rect(0, 0, doc.page.width, 118).fill(ink);
       doc.rect(48, 38, 16, 16).fill(orange);
-      doc.fillColor('#FFFFFF').font('Helvetica-Bold').fontSize(26).text('bossly', 72, 34);
+      doc.fillColor('#FFFFFF').font('Helvetica-Bold').fontSize(26).text('ojaly', 72, 34);
       doc.fillColor('#A8C0B4').font('Helvetica').fontSize(9).text('RUN YOUR BUSINESS. OWN YOUR NUMBERS.', 72, 64, { characterSpacing: 1 });
       doc.fillColor('#FFFFFF').font('Helvetica-Bold').fontSize(20).text(data.title, 48, 38, { width, align: 'right' });
       doc.fillColor('#A8C0B4').font('Helvetica').fontSize(10).text(`#${data.number}`, 48, 66, { width, align: 'right' });
@@ -354,7 +354,7 @@ export class ReceiptsService {
 
       doc.fillColor(muted).font('Helvetica-Oblique').fontSize(9).text(data.note, 48, 740, { width });
       doc.moveTo(48, 770).lineTo(547, 770).strokeColor('#EDE7DB').stroke();
-      doc.fillColor(muted).font('Helvetica').fontSize(8).text('Made with Bossly · bossly.ng · This document was generated automatically.', 48, 780, { width, align: 'center' });
+      doc.fillColor(muted).font('Helvetica').fontSize(8).text('Made with Ojaly · ojaly.ng · This document was generated automatically.', 48, 780, { width, align: 'center' });
       doc.end();
     });
   }

@@ -31,12 +31,12 @@ async function seed(): Promise<void> {
 
   await plans.ensureDefaults();
 
-  const adminEmail = (config.get<string>('seed.email') || 'admin@bossly.ng').toLowerCase();
+  const adminEmail = (config.get<string>('seed.email') || 'admin@ojaly.ng').toLowerCase();
   const adminPassword = config.get<string>('seed.password') || 'ChangeMe123!';
   let admin = await users.findOne({ email: adminEmail }).exec();
   if (!admin) {
     admin = await users.create({
-      name: 'Bossly Admin',
+      name: 'Ojaly Admin',
       email: adminEmail,
       passwordHash: await bcrypt.hash(adminPassword, 12),
       platformRole: 'super_admin',
@@ -62,7 +62,7 @@ async function seed(): Promise<void> {
   }
   const demoEnabled = process.env.SEED_DEMO === 'true' || (process.env.SEED_DEMO !== 'false' && !isProduction);
   if (demoEnabled) {
-    const demoEmail = 'demo@bossly.ng';
+    const demoEmail = 'demo@ojaly.ng';
     const existing = await businesses.findOne({ email: demoEmail }).lean().exec();
     if (existing) {
       console.log(`• Demo business already exists: /s/${existing.slug}`);
@@ -76,7 +76,7 @@ async function seed(): Promise<void> {
           category: 'fashion',
           phone: '08031234567',
         },
-        { ip: '127.0.0.1', userAgent: 'Bossly seed' },
+        { ip: '127.0.0.1', userAgent: 'Ojaly seed' },
       );
       const businessId = result.activeBusinessId as string;
       await businesses.updateOne(
@@ -194,7 +194,7 @@ async function seed(): Promise<void> {
         recurrence: 'monthly',
       });
       const demoDebts = await debts.list(businessId, { page: 1, limit: 5 });
-      console.log(`✓ Demo storefront: http://localhost:3100/s/${(await businesses.findById(businessId).lean().exec())?.slug}`);
+      console.log(`✓ Demo storefront: ${mediaBase}/s/${(await businesses.findById(businessId).lean().exec())?.slug}`);
       console.log(`✓ Demo login: ${demoEmail} / Demo12345`);
       console.log(`✓ Demo data: ${products ? '3 products' : ''}, 2 sales, 1 debt (${demoDebts.items.length} in ledger), 3 expenses`);
     }

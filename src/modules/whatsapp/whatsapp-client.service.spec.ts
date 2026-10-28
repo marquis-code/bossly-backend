@@ -26,7 +26,7 @@ describe('WhatsApp Cloud API client', () => {
     const ctx = setup({ lastInboundAt: new Date(Date.now() - 60_000) });
     const fetchMock = jest.fn(async () => ({ ok: true, json: async () => ({ messages: [{ id: 'wamid.1' }] }) }));
     global.fetch = fetchMock as never;
-    const result = await ctx.service.send({ businessId: 'biz', phone: '08031234567', text: 'Receipt: https://bossly.ng/receipt/x' });
+    const result = await ctx.service.send({ businessId: 'biz', phone: '08031234567', text: 'Receipt: https://ojaly.ng/receipt/x' });
     expect(result).toEqual({ sent: true, usedTemplate: false });
     const body = JSON.parse((fetchMock.mock.calls[0] as unknown as [string, { body: string }])[1].body);
     expect(body.type).toBe('text');
@@ -40,12 +40,12 @@ describe('WhatsApp Cloud API client', () => {
     global.fetch = fetchMock as never;
     const result = await ctx.service.send({
       businessId: 'biz', phone: '08031234567', text: 'Daily summary',
-      template: { name: 'bossly_daily_summary', params: ['Tola Thrift', '₦2,000', '₦1,000', '₦500', '₦0', '1', 'Hoodie'] },
+      template: { name: 'ojaly_daily_summary', params: ['Tola Thrift', '₦2,000', '₦1,000', '₦500', '₦0', '1', 'Hoodie'] },
     });
     expect(result).toEqual({ sent: true, usedTemplate: true });
     const body = JSON.parse((fetchMock.mock.calls[0] as unknown as [string, { body: string }])[1].body);
     expect(body.type).toBe('template');
-    expect(body.template.name).toBe('bossly_daily_summary');
+    expect(body.template.name).toBe('ojaly_daily_summary');
     expect(body.template.components[0].parameters).toHaveLength(7);
   });
 

@@ -53,7 +53,7 @@ export class AdminExportsService {
       metadata: { resource, rows: rows.length },
     });
     return {
-      filename: `bossly-${resource}-${new Date().toISOString().slice(0, 10)}.csv`,
+      filename: `ojaly-${resource}-${new Date().toISOString().slice(0, 10)}.csv`,
       csv,
       rows: rows.length,
     };

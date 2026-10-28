@@ -1,6 +1,6 @@
-# Bossly API
+# Ojaly API
 
-NestJS 11 + MongoDB/Mongoose REST API for Bossly. Multi-tenant, JWT access/refresh, transactional order and stock writes, Paystack webhooks, WhatsApp Cloud API, Resend, Cloudinary signing, reports, PDFs and Swagger.
+NestJS 11 + MongoDB/Mongoose REST API for Ojaly. Multi-tenant, JWT access/refresh, transactional order and stock writes, Paystack webhooks, WhatsApp Cloud API, Resend, Cloudinary signing, reports, PDFs and Swagger.
 
 - Local: `http://localhost:4100/api/v1`
 - Swagger UI: `http://localhost:4100/docs`
@@ -13,7 +13,7 @@ NestJS 11 + MongoDB/Mongoose REST API for Bossly. Multi-tenant, JWT access/refre
 docker compose up -d mongo redis
 cp .env.example .env
 pnpm install
-pnpm --filter @bossly/backend seed
+pnpm --filter @ojaly/backend seed
 pnpm dev:backend
 ```
 
@@ -82,8 +82,8 @@ Platform roles: `super_admin` (read/write) and `support` (read-only). Admin writ
 ## Tests
 
 ```bash
-pnpm --filter @bossly/backend test
-pnpm --filter @bossly/backend test:e2e
+pnpm --filter @ojaly/backend test
+pnpm --filter @ojaly/backend test:e2e
 ```
 
 Unit tests cover money/profit allocation, debt statuses, stock ledger, opening stock, insufficient stock, and the WhatsApp/paste parser including LLM fallback.
@@ -102,7 +102,7 @@ E2E covers:
 ## Seed
 
 ```bash
-pnpm --filter @bossly/backend seed
+pnpm --filter @ojaly/backend seed
 ```
 
 - Ensures the three default plans exist (idempotent).
