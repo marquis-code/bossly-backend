@@ -184,6 +184,7 @@ export class BookingsService {
           blockStartAt,
           blockEndAt,
           durationMinutes,
+          capacity: service.maxBookingsPerSlot || 1,
           bufferBeforeMinutes: service.bufferBeforeMinutes || 0,
           bufferAfterMinutes: service.bufferAfterMinutes || 0,
           timezone,
@@ -433,6 +434,25 @@ export class BookingsService {
     return this.view(booking);
   }
 
+  async roster(businessId: string, id: string) {
+    const booking = await this.bookings.findOne({ _id: id, businessId }).lean().exec();
+    if (!booking) throw new NotFoundException('Booking not found.');
+    const start = new Date(booking.startAt);
+    const items = await this.bookings.find({
+      businessId, serviceId: booking.serviceId,
+      startAt: { $gte: new Date(start.getTime() - 60000), $lte: new Date(start.getTime() + 60000) },
+      status: { $ne: 'cancelled' },
+    }).sort({ customerName: 1 }).lean().exec();
+    return {
+      bookingId: booking._id.toString(), startAt: booking.startAt, capacity: booking.capacity || 1,
+      booked: items.length,
+      items: items.map((item) => ({
+        id: item._id.toString(), bookingNumber: item.bookingNumber, customerName: item.customerName,
+        customerPhone: item.customerPhone, status: item.status, paymentStatus: item.paymentStatus,
+      })),
+    };
+  }
+
   async recordPayment(bookingId: string, amountKobo: number, reference: string) {
     const booking = await this.bookings.findById(bookingId).exec();
     if (!booking) throw new NotFoundException('Booking not found.');
@@ -644,6 +664,7 @@ export class BookingsService {
       startAt: booking.startAt,
       endAt: booking.endAt,
       durationMinutes: booking.durationMinutes,
+      capacity: booking.capacity || 1,
       timezone: booking.timezone,
       addOns: booking.addOns,
       status: booking.status,

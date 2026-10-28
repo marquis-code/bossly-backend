@@ -109,6 +109,8 @@ describe('Service menu and bookings (e2e)', () => {
     expect(created.status).toBe(201);
     expect(created.body.data.booking.status).toBe('confirmed');
     const tokenValue = created.body.data.booking.publicToken;
+    const refundGuard = await http.post(`/api/v1/bookings/${created.body.data.booking.id}/refund`).set(base()).send({});
+    expect(refundGuard.status).toBe(400);
     const lookup = await http.get(`/api/v1/public/bookings/${tokenValue}`);
     expect(lookup.status).toBe(200);
     expect(lookup.body.data.booking.bookingNumber).toContain('BKG');
@@ -119,6 +121,16 @@ describe('Service menu and bookings (e2e)', () => {
     const cancelled = await http.post(`/api/v1/public/bookings/${tokenValue}/cancel`).send({ reason: 'Plans changed' });
     expect(cancelled.status).toBe(201);
     expect(cancelled.body.data.cancelled).toBe(true);
+  });
+
+  it('returns a private business calendar feed', async () => {
+    const feed = await http.get('/api/v1/bookings/calendar-feed').set(base());
+    expect(feed.status).toBe(200);
+    expect(feed.body.data.url).toContain('/public/bookings/calendar/');
+    const token = String(feed.body.data.url).split('/').pop();
+    const calendar = await http.get(`/api/v1/public/bookings/calendar/${token}`);
+    expect(calendar.status).toBe(200);
+    expect(calendar.text).toContain('BEGIN:VCALENDAR');
   });
 
   it('captures a waitlist request and notifies it', async () => {

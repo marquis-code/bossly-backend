@@ -76,6 +76,12 @@ export class BookingsController {
     return this.bookings.updateStatus(user.id, businessId, id, dto.status, dto.reason);
   }
 
+  @Get(':id/roster')
+  @Permissions(PERMISSIONS.BOOKINGS_READ)
+  roster(@CurrentBusiness() businessId: string, @Param('id') id: string) {
+    return this.bookings.roster(businessId, id);
+  }
+
   @Post(':id/refund')
   @Permissions(PERMISSIONS.BOOKINGS_WRITE)
   refund(

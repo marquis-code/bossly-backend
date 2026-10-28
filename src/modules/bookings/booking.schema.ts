@@ -102,6 +102,9 @@ export class Booking {
   @Prop({ type: Number, required: true })
   durationMinutes: number;
 
+  @Prop({ type: Number, default: 1 })
+  capacity: number;
+
   @Prop({ type: Number, default: 0 })
   bufferBeforeMinutes: number;
 
