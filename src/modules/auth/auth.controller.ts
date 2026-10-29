@@ -6,6 +6,8 @@ import { AuthService } from './auth.service';
 import type { AuthResponse } from './auth.service';
 import {
   ChangePasswordDto,
+  PhoneStartDto,
+  PhoneVerifyDto,
   ForgotPasswordDto,
   LoginDto,
   LogoutDto,
@@ -36,6 +38,20 @@ export class AuthController {
   @ApiOperation({ summary: 'Create an account, business and free storefront' })
   register(@Body() dto: RegisterDto, @Req() req: Request, @Ip() ip: string): Promise<AuthResponse> {
     return this.auth.register(dto, this.meta(req, ip));
+  }
+
+  @Public()
+  @Throttle({ default: { limit: 6, ttl: 60000 } })
+  @Post('phone/start')
+  phoneStart(@Body() dto: PhoneStartDto) {
+    return this.auth.startPhoneSignup(dto);
+  }
+
+  @Public()
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @Post('phone/verify')
+  phoneVerify(@Body() dto: PhoneVerifyDto, @Req() req: Request, @Ip() ip: string) {
+    return this.auth.verifyPhoneSignup(dto, this.meta(req, ip));
   }
 
   @Public()

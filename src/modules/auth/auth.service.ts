@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   Injectable,
   Logger,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -11,7 +12,7 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import * as bcrypt from 'bcryptjs';
 import { Connection, Model } from 'mongoose';
-import { randomToken, sha256 } from '../../common/utils/tokens';
+import { numericOtp, randomToken, sha256 } from '../../common/utils/tokens';
 import { campusByCode } from '../campus/campus.constants';
 import { makeSlug, uniqueSuffix } from '../../common/utils/slug';
 import { normalizeNigerianPhone } from '../../common/utils/phone';
@@ -26,11 +27,15 @@ import { welcomeEmail, verificationEmail, resetPasswordEmail } from '../mail/ema
 import { AuditService } from '../audit/audit.service';
 import { AffiliatesService } from '../affiliates/affiliates.service';
 import { RefreshSession, RefreshSessionDocument } from './refresh-session.schema';
+import { PhoneSignup, PhoneSignupDocument } from './phone-signup.schema';
+import { SmsService } from '../sms/sms.service';
 import {
   ChangePasswordDto,
   ForgotPasswordDto,
   LoginDto,
   LogoutDto,
+  PhoneStartDto,
+  PhoneVerifyDto,
   RefreshDto,
   RegisterDto,
   ResetPasswordDto,
@@ -80,6 +85,8 @@ export class AuthService {
     @InjectModel(Business.name) private readonly businesses: Model<BusinessDocument>,
     @InjectModel(Membership.name) private readonly memberships: Model<MembershipDocument>,
     @InjectModel(RefreshSession.name) private readonly sessions: Model<RefreshSessionDocument>,
+    @InjectModel(PhoneSignup.name) private readonly phoneSignups: Model<PhoneSignupDocument>,
+    private readonly sms: SmsService,
     @InjectConnection() private readonly connection: Connection,
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
@@ -225,6 +232,67 @@ export class AuthService {
     });
 
     return this.issueAuthResponse(user, business._id.toString(), 'owner', meta);
+  }
+
+  async startPhoneSignup(dto: PhoneStartDto) {
+    const phone = normalizeNigerianPhone(dto.phone);
+    if (!phone) throw new BadRequestException('Enter a valid Nigerian phone number.');
+    const existing = await this.users.findOne({ phone }).lean().exec();
+    if (!existing && (!dto.name?.trim() || !dto.businessName?.trim())) {
+      throw new BadRequestException('Tell us your name and business name to create an account.');
+    }
+    const code = numericOtp(6);
+    await this.phoneSignups.findOneAndUpdate(
+      { phone },
+      {
+        $set: {
+          codeHash: sha256(code), expiresAt: new Date(Date.now() + 10 * 60 * 1000), consumedAt: null,
+          name: dto.name?.trim() || existing?.name || '', businessName: dto.businessName?.trim() || '',
+          email: dto.email?.toLowerCase() || existing?.email || null,
+          category: dto.category || 'other', campus: dto.campus || null, ambassador: dto.ambassador || null,
+        },
+      },
+      { upsert: true, new: true },
+    ).exec();
+    let channel: 'sms' | 'email' | null = null;
+    const smsResult = await this.sms.send({ to: phone, message: `Your Ojaly code is ${code}. It expires in 10 minutes. Don't share it.` });
+    if (smsResult.sent) channel = 'sms';
+    if (!channel && (dto.email || existing?.email)) {
+      const to = (dto.email || existing?.email) as string;
+      await this.mail.send({
+        to, subject: 'Your Ojaly sign-in code',
+        html: `<p>Your Ojaly code is <strong style="font-size:22px;letter-spacing:4px">${code}</strong>.</p><p>It expires in 10 minutes. If you did not request it, ignore this email.</p>`,
+        template: 'phone_login_code',
+      }).catch(() => undefined);
+      channel = 'email';
+    }
+    if (!channel) throw new ServiceUnavailableException('SMS is not configured yet. Add an email address or configure Termii SMS.');
+    return { sent: true, channel, expiresInSeconds: 600 };
+  }
+
+  async verifyPhoneSignup(dto: PhoneVerifyDto, meta: RequestMeta): Promise<AuthResponse> {
+    const phone = normalizeNigerianPhone(dto.phone);
+    if (!phone) throw new BadRequestException('Enter a valid Nigerian phone number.');
+    const pending = await this.phoneSignups.findOne({ phone }).exec();
+    if (!pending || pending.consumedAt || pending.expiresAt.getTime() < Date.now()) throw new UnauthorizedException('That code has expired. Request a new one.');
+    if (pending.codeHash !== sha256(dto.code.trim())) throw new UnauthorizedException('That code is not correct.');
+    pending.consumedAt = new Date();
+    await pending.save();
+    const user = await this.users.findOne({ phone }).exec();
+    if (user) {
+      if (!user.isActive) throw new ForbiddenException('This account has been disabled.');
+      const membership = await this.memberships.findOne({ userId: user._id.toString(), status: 'active' }).sort({ role: 1, createdAt: 1 }).exec();
+      if (!membership) throw new ForbiddenException('This account is not attached to a business.');
+      user.lastLoginAt = new Date();
+      await user.save();
+      return this.issueAuthResponse(user, membership.businessId, membership.role, meta);
+    }
+    const email = pending.email || `${phone}@phone.ojaly.org`;
+    return this.register({
+      name: pending.name || 'Ojaly user', businessName: pending.businessName || 'My business',
+      email, password: `A1${randomToken(20)}`, phone, category: pending.category || 'other',
+      campus: pending.campus || undefined, ambassador: pending.ambassador || undefined,
+    }, meta);
   }
 
   async login(dto: LoginDto, meta: RequestMeta, platformOnly = false): Promise<AuthResponse> {

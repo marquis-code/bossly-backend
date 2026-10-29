@@ -167,3 +167,54 @@ export class UpdateProfileDto {
   @IsOptional()
   avatarUrl?: string;
 }
+
+
+export class PhoneStartDto {
+  @ApiProperty({ example: '08031234567' })
+  @IsString()
+  phone: string;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  @MaxLength(80)
+  name?: string;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  @MaxLength(80)
+  businessName?: string;
+
+  @ApiPropertyOptional()
+  @IsEmail()
+  @IsOptional()
+  email?: string;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  @MaxLength(40)
+  category?: string;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  campus?: string;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  ambassador?: string;
+}
+
+export class PhoneVerifyDto {
+  @ApiProperty()
+  @IsString()
+  phone: string;
+
+  @ApiProperty({ example: '123456' })
+  @IsString()
+  @Length(6, 6)
+  code: string;
+}
