@@ -123,7 +123,7 @@ export class BookingsService {
     const provider = await this.resolveProvider(businessId, service, dto.providerId);
     const addOns = this.selectedAddOns(service, dto.addOnNames || []);
     const packageRedemption = dto.packageCode ? await this.packages.validateRedemption(businessId, dto.packageCode, service._id.toString(), phone) : null;
-    const marketplaceCampus = dto.marketplaceCampus ? campusByCode(dto.marketplaceCampus) : null;
+    const marketplaceCampus = dto.marketplaceCampus ? { code: dto.marketplaceCampus.trim().toUpperCase() } : null;
     const effectiveSource = marketplaceCampus ? 'marketplace' : source;
     const addonMinutes = addOns.reduce((sum, a) => sum + (a.durationMinutes || 0), 0);
     const durationMinutes = service.durationMinutes + addonMinutes;

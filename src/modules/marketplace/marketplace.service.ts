@@ -17,9 +17,10 @@ export class MarketplaceService {
   ) {}
 
   async search(input: { campus?: string; category?: string; q?: string }) {
-    const campus = input.campus ? campusByCode(input.campus) : null;
+    const campus = input.campus && input.campus !== 'LAGOS' ? campusByCode(input.campus) : null;
     const filter: Record<string, unknown> = {
       storefrontPublished: true,
+      campusVerified: true,
       businessMode: { $in: ['services', 'hybrid'] },
       ...(campus ? { campusCode: campus.code } : {}),
     };
@@ -73,7 +74,7 @@ export class MarketplaceService {
   }
 
   async adminBusinesses(campus?: string) {
-    const filter: Record<string, unknown> = { businessMode: { $in: ['services', 'hybrid'] }, campusCode: { $ne: null }, ...(campus ? { campusCode: campus } : {}) };
+    const filter: Record<string, unknown> = { businessMode: { $in: ['services', 'hybrid'] }, ...(campus ? { campusCode: campus } : {}) };
     const businesses = await this.businesses.find(filter).select('name slug campusCode campusName campusVerified campusVerifiedAt createdAt firstSaleAt').sort({ campusCode: 1, name: 1 }).limit(300).lean().exec();
     return businesses.map((business) => ({
       id: business._id.toString(), name: business.name, slug: business.slug,
@@ -94,7 +95,7 @@ export class MarketplaceService {
   async adminDashboard() {
     const [bookings, businesses] = await Promise.all([
       this.bookings.find({ source: 'marketplace' }).select('marketplaceCampus priceKobo marketplaceFeeKobo status startAt customerPhone').lean().exec(),
-      this.businesses.find({ businessMode: { $in: ['services', 'hybrid'] }, campusCode: { $ne: null } }).select('campusCode campusVerified firstSaleAt').lean().exec(),
+      this.businesses.find({ businessMode: { $in: ['services', 'hybrid'] } }).select('campusCode campusVerified firstSaleAt').lean().exec(),
     ]);
     const campuses = LAGOS_CAMPUSES.map((campus) => {
       const own = bookings.filter((booking) => booking.marketplaceCampus === campus.code);
