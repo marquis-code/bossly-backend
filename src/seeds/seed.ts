@@ -225,6 +225,7 @@ async function seed(): Promise<void> {
           publicPhone: '08031234567', whatsappNumber: '08031234567', email: 'hello@glowroom.ng',
           address: '12 Herbert Macaulay Way, Yaba, Lagos', brandColor: '#B45AF2', templateKey: 'soft-serve',
           storefrontPublished: true, publishedAt: new Date(), bookingSettings: settings,
+          campusCode: 'UNILAG', campusName: 'University of Lagos', campusVerified: true, marketplaceFeePercent: 5,
           sections: ['hero', 'featured', 'story', 'testimonials', 'contact'],
           bannerUrl: `${mediaBase}/images/business/website-founder.webp`,
           storyImageUrl: `${mediaBase}/images/business/baker.webp`,
@@ -263,6 +264,8 @@ async function seed(): Promise<void> {
       }
     }
   }
+
+  if (demoEnabled) await businesses.updateOne({ slug: 'glow-room' }, { $set: { campusCode: 'UNILAG', campusName: 'University of Lagos', campusVerified: true, marketplaceFeePercent: 5 } }).exec();
 
   console.log('');
   console.log('Seed complete.');

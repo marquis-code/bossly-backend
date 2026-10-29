@@ -44,6 +44,11 @@ export class CreateBookingDto {
   @MaxLength(2000)
   notes?: string;
 
+  @ApiPropertyOptional({ description: 'Campus marketplace attribution, e.g. UNILAG' })
+  @IsString()
+  @IsOptional()
+  marketplaceCampus?: string;
+
   @ApiPropertyOptional({ description: 'Prepaid package redemption code' })
   @IsString()
   @IsOptional()

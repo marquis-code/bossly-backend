@@ -5,7 +5,7 @@ import { schemaOptions } from '../../common/schemas/schema-options';
 export type BookingDocument = HydratedDocument<Booking>;
 export type BookingStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no_show';
 export type BookingPaymentStatus = 'unpaid' | 'deposit_paid' | 'paid' | 'refunded';
-export type BookingSource = 'storefront' | 'dashboard' | 'whatsapp' | 'walk_in';
+export type BookingSource = 'storefront' | 'dashboard' | 'whatsapp' | 'walk_in' | 'marketplace';
 
 @Schema({ _id: false })
 export class BookingAddon {
@@ -114,6 +114,15 @@ export class Booking {
   @Prop({ type: String, default: null })
   packageName: string | null;
 
+  @Prop({ type: String, default: null, index: true })
+  marketplaceCampus: string | null;
+
+  @Prop({ type: Number, default: 0 })
+  marketplaceFeePercent: number;
+
+  @Prop({ type: Number, default: 0 })
+  marketplaceFeeKobo: number;
+
   @Prop({ type: Number, default: 0 })
   packageValueKobo: number;
 
@@ -132,7 +141,7 @@ export class Booking {
   @Prop({ type: String, enum: ['pending', 'confirmed', 'completed', 'cancelled', 'no_show'], default: 'pending', index: true })
   status: BookingStatus;
 
-  @Prop({ type: String, enum: ['storefront', 'dashboard', 'whatsapp', 'walk_in'], default: 'dashboard' })
+  @Prop({ type: String, enum: ['storefront', 'dashboard', 'whatsapp', 'walk_in', 'marketplace'], default: 'dashboard' })
   source: BookingSource;
 
   @Prop({ type: String, default: '' })

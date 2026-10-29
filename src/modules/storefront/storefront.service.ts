@@ -302,6 +302,9 @@ export class StorefrontService {
     return {
       id: b._id.toString(),
       businessMode: b.businessMode || 'products',
+      campusCode: b.campusCode || null,
+      campusName: b.campusName || null,
+      campusVerified: Boolean(b.campusVerified),
       bookingSettings: b.bookingSettings || null,
       name: b.name,
       slug: b.slug,

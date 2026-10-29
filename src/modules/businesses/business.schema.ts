@@ -177,6 +177,15 @@ export class Business {
   @Prop({ type: String, default: null, index: true })
   campusAmbassadorCode: string | null;
 
+  @Prop({ type: Boolean, default: false, index: true })
+  campusVerified: boolean;
+
+  @Prop({ type: Date, default: null })
+  campusVerifiedAt: Date | null;
+
+  @Prop({ type: Number, default: 5, min: 0, max: 30 })
+  marketplaceFeePercent: number;
+
   @Prop({ type: Boolean, default: false })
   customDomainVerified: boolean;
 

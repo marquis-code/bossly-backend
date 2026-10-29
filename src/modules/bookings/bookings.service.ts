@@ -14,6 +14,7 @@ import { MailService } from '../mail/mail.service';
 import { SmsService } from '../sms/sms.service';
 import { PackagesService } from '../packages/packages.service';
 import { CalendarService } from '../calendar/calendar.service';
+import { campusByCode } from '../campus/campus.constants';
 import { DebtsService } from '../debts/debts.service';
 import { ReceiptsService } from '../receipts/receipts.service';
 import { WaitlistService } from '../waitlist/waitlist.service';
@@ -122,14 +123,18 @@ export class BookingsService {
     const provider = await this.resolveProvider(businessId, service, dto.providerId);
     const addOns = this.selectedAddOns(service, dto.addOnNames || []);
     const packageRedemption = dto.packageCode ? await this.packages.validateRedemption(businessId, dto.packageCode, service._id.toString(), phone) : null;
+    const marketplaceCampus = dto.marketplaceCampus ? campusByCode(dto.marketplaceCampus) : null;
+    const effectiveSource = marketplaceCampus ? 'marketplace' : source;
     const addonMinutes = addOns.reduce((sum, a) => sum + (a.durationMinutes || 0), 0);
     const durationMinutes = service.durationMinutes + addonMinutes;
     const timezone = business.timezone || 'Africa/Lagos';
-    await this.availability.assertSlot(businessId, service._id.toString(), startAt, String(provider._id), timezone, durationMinutes, { ignoreWindow: source !== 'storefront' });
+    await this.availability.assertSlot(businessId, service._id.toString(), startAt, String(provider._id), timezone, durationMinutes, { ignoreWindow: effectiveSource !== 'storefront' && effectiveSource !== 'marketplace' });
 
     const totalKobo = service.priceKobo + addOns.reduce((sum, a) => sum + a.priceKobo, 0);
     const packageValueKobo = packageRedemption ? totalKobo : 0;
     const chargeKobo = packageRedemption ? 0 : totalKobo;
+    const marketplaceFeePercent = marketplaceCampus ? (business.marketplaceFeePercent ?? 5) : 0;
+    const marketplaceFeeKobo = marketplaceCampus ? Math.round((chargeKobo * marketplaceFeePercent) / 100) : 0;
     const depositPercent = business.bookingSettings?.depositPercent || 0;
     const depositKobo = packageRedemption ? 0 : service.requiresDeposit
       ? Math.min(totalKobo, service.depositKobo || Math.round((totalKobo * depositPercent) / 100))
@@ -199,10 +204,13 @@ export class BookingsService {
           timezone,
           addOns,
           status: shouldConfirm ? 'confirmed' : 'pending',
-          source,
+          source: effectiveSource,
           notes: sanitizeText(dto.notes, 2000),
           priceKobo: chargeKobo,
           packageValueKobo,
+          marketplaceCampus: marketplaceCampus?.code || null,
+          marketplaceFeePercent,
+          marketplaceFeeKobo,
           packagePurchaseId: packageRedemption?.id || null,
           packageCode: packageRedemption?.redemptionCode || null,
           packageName: packageRedemption?.packageName || null,
@@ -712,6 +720,9 @@ export class BookingsService {
       packageCode: booking.packageCode,
       packageName: booking.packageName,
       packageValueKobo: booking.packageValueKobo || 0,
+      marketplaceCampus: booking.marketplaceCampus,
+      marketplaceFeePercent: booking.marketplaceFeePercent || 0,
+      marketplaceFeeKobo: booking.marketplaceFeeKobo || 0,
       timezone: booking.timezone,
       addOns: booking.addOns,
       status: booking.status,

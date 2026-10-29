@@ -28,6 +28,7 @@ import { PackagesModule } from './modules/packages/packages.module';
 import { CampusModule } from './modules/campus/campus.module';
 import { CalendarModule } from './modules/calendar/calendar.module';
 import { AiModule } from './modules/ai/ai.module';
+import { MarketplaceModule } from './modules/marketplace/marketplace.module';
 import { StockModule } from './modules/stock/stock.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { SalesModule } from './modules/sales/sales.module';
@@ -96,6 +97,7 @@ import { JwtModule } from '@nestjs/jwt';
     CampusModule,
     CalendarModule,
     AiModule,
+    MarketplaceModule,
     StockModule,
     CustomersModule,
     DebtsModule,
