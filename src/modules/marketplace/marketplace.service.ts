@@ -108,7 +108,7 @@ export class MarketplaceService {
         completed: own.filter((booking) => booking.status === 'completed').length,
         gmvKobo: own.reduce((sum, booking) => sum + booking.priceKobo, 0),
         commissionKobo: own.reduce((sum, booking) => sum + (booking.marketplaceFeeKobo || 0), 0),
-        repeatCustomers: new Set(own.map((booking) => booking.customerPhone)).size,
+        repeatCustomers: [...new Set(own.map((booking) => booking.customerPhone))].filter((phone) => own.filter((booking) => booking.customerPhone === phone).length > 1).length,
       };
     });
     return {
