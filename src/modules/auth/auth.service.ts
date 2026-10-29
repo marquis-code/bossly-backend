@@ -141,7 +141,9 @@ export class AuthService {
               name: dto.businessName,
               slug,
               ownerId: user._id.toString(),
-              category: dto.category || 'other',
+              category: (dto.category === 'other' || !dto.category) && dto.customCategory?.trim()
+                ? dto.customCategory.trim()
+                : (dto.category || dto.customCategory || 'other'),
               businessMode: dto.businessMode || 'products',
               address: dto.address || '',
               email,
@@ -197,31 +199,50 @@ export class AuthService {
     ).exec();
 
     const verifyUrl = `${this.config.get<string>('appUrl')}/verify-email?token=${verification}`;
+    const verificationMail = verificationEmail(dto.name, verifyUrl, dto.businessName);
     const welcome = welcomeEmail(
       dto.name,
       dto.businessName,
       `${this.config.get<string>('appUrl')}/app`,
       business.logoUrl,
       business.tagline,
+      verifyUrl,
     );
-    const verificationMail = verificationEmail(dto.name, verifyUrl);
-    // Deliver email verification followed by welcome email
-    await this.mail.send({
-      to: email,
-      subject: verificationMail.subject,
-      html: verificationMail.html,
-      template: 'email_verification',
-      businessId: business._id.toString(),
-      metadata: { purpose: 'verify_email' },
-    }).catch(() => undefined);
 
-    await this.mail.send({
-      to: email,
-      subject: welcome.subject,
-      html: welcome.html,
-      template: 'welcome',
-      businessId: business._id.toString(),
-    }).catch(() => undefined);
+    // Deliver email verification followed by welcome email with safe spacing
+    try {
+      const vResult = await this.mail.send({
+        to: email,
+        subject: verificationMail.subject,
+        html: verificationMail.html,
+        template: 'email_verification',
+        businessId: business._id.toString(),
+        metadata: { purpose: 'verify_email' },
+      });
+      if (vResult.sent) {
+        this.logger.log(`Verification email sent to ${this.maskEmail(email)}`);
+      }
+    } catch (err) {
+      this.logger.error(`Error sending verification email to ${this.maskEmail(email)}: ${(err as Error).message}`);
+    }
+
+    // Delay 1200ms to avoid Resend 2 req/s rate limits on rapid sends
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+
+    try {
+      const wResult = await this.mail.send({
+        to: email,
+        subject: welcome.subject,
+        html: welcome.html,
+        template: 'welcome',
+        businessId: business._id.toString(),
+      });
+      if (wResult.sent) {
+        this.logger.log(`Welcome email sent to ${this.maskEmail(email)}`);
+      }
+    } catch (err) {
+      this.logger.error(`Error sending welcome email to ${this.maskEmail(email)}: ${(err as Error).message}`);
+    }
 
     await this.audit.record({
       businessId: business._id.toString(),

@@ -99,31 +99,14 @@ function renderBadge(badge?: EmailBadge): string {
 }
 
 function renderHeader(opts: EmailLayoutOptions): string {
-  const { businessName, businessLogo, businessTagline } = opts;
+  const { businessName, businessLogo, businessTagline, headerType } = opts;
 
-  // If a business name or logo is provided, show business branding
-  if (businessLogo || businessName) {
-    const initials = (businessName || 'Store')
-      .split(' ')
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((p) => p[0]?.toUpperCase())
-      .join('');
-
-    const avatarHtml = businessLogo
-      ? `<img src="${escapeHtml(businessLogo)}" width="48" height="48" alt="${escapeHtml(businessName || '')}" style="width:48px;height:48px;border-radius:14px;object-fit:cover;display:block;border:2px solid rgba(255,255,255,0.22);box-shadow:0 3px 10px rgba(0,0,0,0.18);" />`
-      : `<table role="presentation" cellpadding="0" cellspacing="0" style="width:48px;height:48px;border-radius:14px;background-color:${BRAND.orange};text-align:center;">
-          <tr>
-            <td style="color:#ffffff;font-size:18px;font-weight:800;letter-spacing:-0.5px;text-align:center;vertical-align:middle;font-family:-apple-system,BlinkMacSystemFont,'DM Sans',Arial,sans-serif;">
-              ${escapeHtml(initials)}
-            </td>
-          </tr>
-        </table>`;
-
+  // Render business-branded header ONLY if explicitly requested as 'business' AND businessLogo exists
+  if (headerType === 'business' && businessLogo) {
     return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">
       <tr>
         <td style="width:54px;vertical-align:middle;">
-          ${avatarHtml}
+          <img src="${escapeHtml(businessLogo)}" width="48" height="48" alt="${escapeHtml(businessName || '')}" style="width:48px;height:48px;border-radius:14px;object-fit:cover;display:block;border:2px solid rgba(255,255,255,0.22);box-shadow:0 3px 10px rgba(0,0,0,0.18);" />
         </td>
         <td style="vertical-align:middle;padding-left:14px;">
           <div style="font-size:18px;font-weight:800;color:#FFFFFF;letter-spacing:-0.3px;line-height:1.2;font-family:-apple-system,BlinkMacSystemFont,'DM Sans','Segoe UI',Arial,sans-serif;">
@@ -149,16 +132,27 @@ function renderHeader(opts: EmailLayoutOptions): string {
     </table>`;
   }
 
-  // Otherwise, render the official Ojaly brand header
+  // Official Ojaly brand header featuring the official high-resolution logo
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">
     <tr>
-      <td>
+      <td style="vertical-align:middle;">
         <a href="https://ojaly.org" target="_blank" style="text-decoration:none;display:inline-block;">
-          <img src="https://ojaly.org/brand/ojaly-logo-light.png" width="180" height="48" alt="Ojaly" style="display:block;width:180px;height:48px;border:0;outline:none;text-decoration:none;">
+          <img src="https://ojaly.org/brand/ojaly-logo-light.png" width="150" height="40" alt="Ojaly" style="display:block;width:150px;height:40px;border:0;outline:none;text-decoration:none;">
         </a>
-        <div style="color:#A8C0B4;font-size:12px;font-weight:500;margin-top:6px;letter-spacing:0.1px;">
-          Book local. Pay secure.
-        </div>
+      </td>
+      <td align="right" style="vertical-align:middle;">
+        <a href="https://ojaly.org" target="_blank" style="text-decoration:none;display:inline-block;">
+          <table role="presentation" cellpadding="0" cellspacing="0" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:20px;padding:4px 12px;">
+            <tr>
+              <td style="vertical-align:middle;">
+                <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background-color:#FF5A1F;margin-right:6px;"></span>
+              </td>
+              <td style="color:#D8E8E0;font-size:11px;font-weight:700;letter-spacing:0.4px;vertical-align:middle;font-family:-apple-system,BlinkMacSystemFont,'DM Sans',Arial,sans-serif;">
+                ojaly.org
+              </td>
+            </tr>
+          </table>
+        </a>
       </td>
     </tr>
   </table>`;
@@ -289,78 +283,147 @@ export function welcomeEmail(
   url: string,
   businessLogo?: string | null,
   businessTagline?: string | null,
+  verifyUrl?: string | null,
 ): { subject: string; html: string } {
   const firstName = name.split(' ')[0] || 'there';
+  const initials = (businessName || 'Store')
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase())
+    .join('');
+
   return {
-    subject: `Your business is live, ${firstName} 🚀`,
+    subject: `Welcome to Ojaly, ${firstName}! ${businessName} is live 🚀`,
     html: emailLayout({
       title: `Welcome to Ojaly, ${firstName}!`,
-      preheader: `${businessName} is officially registered and live on Ojaly.`,
-      badge: { text: 'Welcome aboard', tone: 'orange', icon: '🚀' },
+      preheader: `${businessName} is officially registered and live on Ojaly. Manage products, take orders, and calculate profit.`,
+      badge: { text: 'Business Active', tone: 'orange', icon: '🚀' },
+      headerType: 'platform',
       businessName,
-      businessLogo,
-      businessTagline,
-      body: `<p style="margin-top:0;">Hi ${escapeHtml(firstName)},</p>
-      <p>Congratulations! <strong>${escapeHtml(businessName)}</strong> is now officially active. From today, every sale you record calculates your true gross profit, tracks product inventory, and watches customer debts automatically.</p>
+      body: `<p style="margin-top:0;font-size:15px;line-height:1.6;">Hi <strong>${escapeHtml(firstName)}</strong>,</p>
+      <p style="font-size:15px;line-height:1.6;">Congratulations! <strong>${escapeHtml(businessName)}</strong> is now officially registered on Ojaly. You now have a complete retail & services operating system designed specifically for Nigerian businesses.</p>
       
-      <div style="background-color:${BRAND.forestSoft};border:1px solid ${BRAND.forestBorder};border-radius:14px;padding:18px 20px;margin:22px 0;">
-        <div style="font-weight:800;color:${BRAND.forest};font-size:14px;display:flex;align-items:center;">
-          ✨ Your online storefront is already generated
+      <!-- Business Spotlight Card -->
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:22px 0;background-color:#06231A;background-image:linear-gradient(135deg, #06231A 0%, #0B3D2E 100%);border-radius:16px;border:1px solid rgba(255,255,255,0.12);box-shadow:0 6px 18px rgba(6,35,26,0.12);overflow:hidden;">
+        <tr>
+          <td style="padding:22px 24px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="vertical-align:middle;">
+                  <span style="display:inline-block;background:rgba(255,90,31,0.22);border:1px solid rgba(255,90,31,0.45);border-radius:12px;padding:3px 10px;font-size:10px;font-weight:800;color:#FF7A45;text-transform:uppercase;letter-spacing:0.8px;">Storefront Ready</span>
+                  <div style="margin:8px 0 4px;font-size:20px;font-weight:800;color:#FFFFFF;letter-spacing:-0.4px;font-family:-apple-system,BlinkMacSystemFont,'DM Sans',Arial,sans-serif;">
+                    ${escapeHtml(businessName)}
+                  </div>
+                  <div style="font-size:12px;color:#A8C0B4;">
+                    ${escapeHtml(businessTagline || 'Verified merchant on Ojaly')}
+                  </div>
+                </td>
+                <td align="right" style="vertical-align:middle;width:48px;">
+                  <div style="width:46px;height:46px;border-radius:14px;background:#FF5A1F;text-align:center;line-height:46px;color:#ffffff;font-size:18px;font-weight:800;font-family:-apple-system,BlinkMacSystemFont,'DM Sans',Arial,sans-serif;box-shadow:0 3px 10px rgba(255,90,31,0.3);">
+                    ${escapeHtml(initials)}
+                  </div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+
+      ${
+        verifyUrl
+          ? `<div style="background-color:${BRAND.forestSoft};border:1px solid ${BRAND.forestBorder};border-radius:14px;padding:16px 20px;margin:20px 0;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="vertical-align:middle;">
+                    <div style="font-weight:800;color:${BRAND.forest};font-size:13px;">
+                      🛡️ Confirm your email address
+                    </div>
+                    <div style="font-size:12px;color:#184232;margin-top:3px;line-height:1.4;">
+                      Please verify your email to secure your account and enable online payouts.
+                    </div>
+                  </td>
+                  <td align="right" style="vertical-align:middle;padding-left:12px;">
+                    <a href="${verifyUrl}" target="_blank" style="display:inline-block;background-color:${BRAND.forest};color:#ffffff !important;text-decoration:none;font-size:12px;font-weight:700;padding:8px 16px;border-radius:8px;white-space:nowrap;">
+                      Verify now &rarr;
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </div>`
+          : ''
+      }
+
+      <div style="background-color:${BRAND.orangeSoft};border:1px solid ${BRAND.orangeBorder};border-radius:14px;padding:16px 20px;margin:20px 0;">
+        <div style="font-weight:800;color:${BRAND.orange};font-size:14px;">
+          ✨ Auto-Generated Online Storefront
         </div>
-        <div style="font-size:13px;color:#184232;margin-top:5px;line-height:1.5;">
-          Add your products with photos and prices &mdash; you can share your custom website link in your Instagram or WhatsApp bio right away.
+        <div style="font-size:13px;color:#4A2312;margin-top:5px;line-height:1.5;">
+          Add products or services with photos and prices &mdash; share your custom website link in your Instagram bio or WhatsApp status immediately.
         </div>
       </div>
 
-      <p style="font-weight:800;color:${BRAND.ink};margin:22px 0 12px;font-size:15px;">Your first 3 steps to take control:</p>
+      <p style="font-weight:800;color:${BRAND.ink};margin:24px 0 12px;font-size:15px;">Your first 3 steps to take control:</p>
       
       <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;font-size:14px;margin-bottom:14px;">
         <tr>
           <td style="padding:10px 0;width:32px;vertical-align:top;">
-            <span style="display:inline-block;width:22px;height:22px;line-height:22px;border-radius:50%;background:${BRAND.ink};color:#fff;text-align:center;font-size:11px;font-weight:800;">1</span>
+            <span style="display:inline-block;width:24px;height:24px;line-height:24px;border-radius:50%;background:${BRAND.ink};color:#fff;text-align:center;font-size:11px;font-weight:800;">1</span>
           </td>
-          <td style="padding:10px 0;vertical-align:top;">
-            <strong>Add your first product:</strong> Set cost price and selling price so your profits are calculated to the kobo.
+          <td style="padding:10px 0 10px 8px;vertical-align:top;">
+            <strong>Add your first product or service:</strong> Set cost and selling prices so your margins are tracked to the kobo.
           </td>
         </tr>
         <tr>
           <td style="padding:10px 0;width:32px;vertical-align:top;">
-            <span style="display:inline-block;width:22px;height:22px;line-height:22px;border-radius:50%;background:${BRAND.ink};color:#fff;text-align:center;font-size:11px;font-weight:800;">2</span>
+            <span style="display:inline-block;width:24px;height:24px;line-height:24px;border-radius:50%;background:${BRAND.ink};color:#fff;text-align:center;font-size:11px;font-weight:800;">2</span>
           </td>
-          <td style="padding:10px 0;vertical-align:top;">
+          <td style="padding:10px 0 10px 8px;vertical-align:top;">
             <strong>Record a sale:</strong> Log it in under 10 seconds via the web app or straight through our WhatsApp assistant.
           </td>
         </tr>
         <tr>
           <td style="padding:10px 0;width:32px;vertical-align:top;">
-            <span style="display:inline-block;width:22px;height:22px;line-height:22px;border-radius:50%;background:${BRAND.ink};color:#fff;text-align:center;font-size:11px;font-weight:800;">3</span>
+            <span style="display:inline-block;width:24px;height:24px;line-height:24px;border-radius:50%;background:${BRAND.ink};color:#fff;text-align:center;font-size:11px;font-weight:800;">3</span>
           </td>
-          <td style="padding:10px 0;vertical-align:top;">
-            <strong>Watch your numbers:</strong> View real-time revenue, margins, and inventory health with zero bookkeeping stress.
+          <td style="padding:10px 0 10px 8px;vertical-align:top;">
+            <strong>Watch your numbers:</strong> View real-time revenue, margins, and customer debts with zero bookkeeping headache.
           </td>
         </tr>
       </table>`,
-      button: { label: 'Open my dashboard', url },
-      footerNote: 'Tip: You can customize your daily or weekly WhatsApp summaries in Settings &rarr; Summaries.',
+      button: { label: 'Open My Store Dashboard', url },
+      footerNote: 'Tip: You can customize daily WhatsApp sales digests in Settings &rarr; WhatsApp & Summaries.',
     }),
   };
 }
 
-export function verificationEmail(name: string, url: string): { subject: string; html: string } {
+export function verificationEmail(name: string, url: string, businessName?: string): { subject: string; html: string } {
   const firstName = name.split(' ')[0] || 'there';
+  const displayBusiness = businessName ? ` for ${businessName}` : '';
   return {
-    subject: 'Confirm your Ojaly account email',
+    subject: `Confirm your Ojaly account email${displayBusiness} 🛡️`,
     html: emailLayout({
-      title: 'One quick tap to verify',
-      preheader: 'Please confirm your email address to secure your Ojaly account.',
+      title: 'Confirm your email address',
+      preheader: `One quick tap to verify your email and secure ${businessName || 'your Ojaly account'}.`,
       badge: { text: 'Account Security', tone: 'green', icon: '🛡️' },
-      body: `<p style="margin-top:0;">Hi ${escapeHtml(firstName)},</p>
-      <p>Thank you for creating your business account on Ojaly. Please tap the button below to confirm that this email address belongs to you and complete your setup.</p>
+      headerType: 'platform',
+      businessName,
+      body: `<p style="margin-top:0;font-size:15px;line-height:1.6;">Hi <strong>${escapeHtml(firstName)}</strong>,</p>
+      <p style="font-size:15px;line-height:1.6;">Thank you for registering on Ojaly${businessName ? ` to power <strong>${escapeHtml(businessName)}</strong>` : ''}. Please tap the button below to confirm that this email address belongs to you and complete your setup.</p>
       
-      <div style="background-color:${BRAND.cream};border:1px solid ${BRAND.border};border-radius:14px;padding:16px 18px;margin:22px 0;font-size:13px;color:${BRAND.muted};line-height:1.5;">
+      <div style="background-color:${BRAND.forestSoft};border:1px solid ${BRAND.forestBorder};border-radius:14px;padding:16px 20px;margin:22px 0;">
+        <div style="font-weight:800;color:${BRAND.forest};font-size:13px;">
+          ✦ Why verify your email?
+        </div>
+        <div style="font-size:13px;color:#184232;margin-top:5px;line-height:1.5;">
+          Verification secures your storefront link, activates online Paystack payouts, and ensures you receive urgent order and payment notifications.
+        </div>
+      </div>
+
+      <div style="background-color:${BRAND.cream};border:1px solid ${BRAND.border};border-radius:14px;padding:14px 18px;margin:20px 0;font-size:12px;color:${BRAND.muted};line-height:1.5;">
         🔒 This secure link is valid for <strong>24 hours</strong>. If you did not create an Ojaly account, you can safely disregard this email.
       </div>`,
-      button: { label: 'Confirm my email address', url },
+      button: { label: 'Confirm My Email Address', url },
       footerNote: 'For security reasons, never forward this verification link to anyone.',
     }),
   };

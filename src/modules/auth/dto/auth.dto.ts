@@ -44,6 +44,19 @@ export class RegisterDto {
   @MaxLength(60)
   category?: string;
 
+  @ApiPropertyOptional({ example: 'wig installation' })
+  @Transform(trim)
+  @IsString()
+  @IsOptional()
+  @MaxLength(100)
+  customCategory?: string;
+
+  @ApiPropertyOptional({ example: 'starter' })
+  @IsString()
+  @IsOptional()
+  @MaxLength(50)
+  plan?: string;
+
   @ApiPropertyOptional({ example: 'services', enum: ['products', 'services', 'hybrid'] })
   @IsIn(['products', 'services', 'hybrid'])
   @IsOptional()
@@ -209,6 +222,13 @@ export class PhoneStartDto {
   @MaxLength(60)
   category?: string;
 
+  @ApiPropertyOptional({ example: 'wig installation' })
+  @Transform(trim)
+  @IsString()
+  @IsOptional()
+  @MaxLength(100)
+  customCategory?: string;
+
   @ApiPropertyOptional()
   @IsString()
   @IsOptional()
@@ -229,6 +249,12 @@ export class PhoneStartDto {
   @IsString()
   @IsOptional()
   ambassador?: string;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  @MaxLength(80)
+  referral?: string;
 }
 
 export class PhoneVerifyDto {
