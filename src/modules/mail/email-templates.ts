@@ -137,7 +137,7 @@ function renderHeader(opts: EmailLayoutOptions): string {
           <a href="https://ojaly.org" target="_blank" style="text-decoration:none;">
             <table role="presentation" cellpadding="0" cellspacing="0" style="display:inline-block;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.14);border-radius:20px;padding:5px 12px;">
               <tr>
-                <td style="background-color:${BRAND.orange};width:7px;height:7px;border-radius:50%;vertical-align:middle;"></td>
+                <td style="vertical-align:middle;"><img src="https://ojaly.org/brand/ojaly-mark-64.png" width="18" height="18" alt="Ojaly" style="width:18px;height:18px;border-radius:5px;display:block;"></td>
                 <td style="padding-left:7px;color:#E9F4EE;font-size:11px;font-weight:700;letter-spacing:0.5px;vertical-align:middle;font-family:-apple-system,BlinkMacSystemFont,'DM Sans',Arial,sans-serif;">
                   Ojaly
                 </td>
@@ -153,20 +153,11 @@ function renderHeader(opts: EmailLayoutOptions): string {
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">
     <tr>
       <td>
-        <a href="https://ojaly.org" target="_blank" style="text-decoration:none;display:inline-flex;align-items:center;">
-          <table role="presentation" cellpadding="0" cellspacing="0">
-            <tr>
-              <td style="width:34px;height:34px;border-radius:10px;background-color:${BRAND.orange};text-align:center;vertical-align:middle;box-shadow:0 3px 8px rgba(255,90,31,0.35);">
-                <span style="color:#ffffff;font-size:20px;font-weight:900;line-height:34px;display:block;font-family:-apple-system,BlinkMacSystemFont,sans-serif;">O</span>
-              </td>
-              <td style="padding-left:12px;color:${BRAND.white};font-size:24px;font-weight:800;letter-spacing:-0.5px;font-family:-apple-system,BlinkMacSystemFont,'Space Grotesk','DM Sans',Arial,sans-serif;vertical-align:middle;">
-                ojaly
-              </td>
-            </tr>
-          </table>
+        <a href="https://ojaly.org" target="_blank" style="text-decoration:none;display:inline-block;">
+          <img src="https://ojaly.org/brand/ojaly-logo-light.png" width="180" height="48" alt="Ojaly" style="display:block;width:180px;height:48px;border:0;outline:none;text-decoration:none;">
         </a>
         <div style="color:#A8C0B4;font-size:12px;font-weight:500;margin-top:6px;letter-spacing:0.1px;">
-          Run your business. Own your numbers.
+          Book local. Pay secure.
         </div>
       </td>
     </tr>
