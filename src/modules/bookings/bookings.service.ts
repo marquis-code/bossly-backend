@@ -25,9 +25,10 @@ import { randomToken } from '../../common/utils/tokens';
 import { normalizeNigerianPhone } from '../../common/utils/phone';
 import { sanitizeText } from '../../common/utils/sanitize';
 import { addMinutes, localDateKey } from './booking.utils';
+import { resolveDateRange, humanRangeLabel, DateRangePreset } from '../../common/utils/dates';
 import { addDays, addMonths } from 'date-fns';
 import {
-  BookingQueryDto, CancelBookingDto, CreateBookingDto, CreateRecurringBookingDto, RescheduleBookingDto,
+  BookingQueryDto, BookingMetricsQueryDto, CancelBookingDto, CreateBookingDto, CreateRecurringBookingDto, RescheduleBookingDto,
 } from './booking.dto';
 
 @Injectable()
@@ -93,6 +94,62 @@ export class BookingsService {
       items: items.map((b) => this.view(b)),
       meta: { total, page, limit, pages: Math.ceil(total / limit) },
       summary: { today: todayCount, upcoming: upcomingCount, pending: pendingCount },
+    };
+  }
+
+  async metrics(businessId: string, query: BookingMetricsQueryDto) {
+    const business = await this.businesses.findById(businessId).lean().exec();
+    if (!business) throw new NotFoundException('Business not found.');
+    const preset = (query.range || 'month') as DateRangePreset;
+    const range = resolveDateRange(preset, query.from, query.to);
+    const bookings = await this.bookings.find({
+      businessId,
+      startAt: { $gte: range.from, $lte: range.to },
+    }).select('status priceKobo amountPaidKobo source marketplaceCampus customerPhone serviceName startAt createdAt').sort({ startAt: 1 }).lean().exec();
+
+    const completed = bookings.filter((b) => b.status === 'completed');
+    const pending = bookings.filter((b) => b.status === 'pending');
+    const cancelled = bookings.filter((b) => b.status === 'cancelled');
+    const noShows = bookings.filter((b) => b.status === 'no_show');
+    const marketplace = bookings.filter((b) => b.source === 'marketplace');
+    const marketplaceCompleted = marketplace.filter((b) => b.status === 'completed');
+    const phones = new Map<string, number>();
+    for (const booking of completed) phones.set(booking.customerPhone, (phones.get(booking.customerPhone) || 0) + 1);
+    const repeatCustomers = [...phones.values()].filter((count) => count > 1).length;
+    const displayStatuses = ['completed', 'no_show'];
+    const noShowRate = displayStatuses.reduce((sum, status) => sum + bookings.filter((b) => b.status === status).length, 0) > 0
+      ? Math.round((noShows.length / (completed.length + noShows.length)) * 1000) / 10
+      : 0;
+
+    const serviceMap = new Map<string, { name: string; bookings: number; revenueKobo: number }>();
+    for (const booking of completed) {
+      const current = serviceMap.get(booking.serviceName) || { name: booking.serviceName, bookings: 0, revenueKobo: 0 };
+      current.bookings += 1;
+      current.revenueKobo += booking.priceKobo;
+      serviceMap.set(booking.serviceName, current);
+    }
+
+    return {
+      range: { preset, from: range.from, to: range.to, label: range.label, human: humanRangeLabel(range) },
+      summary: {
+        bookings: bookings.length,
+        completed: completed.length,
+        pending: pending.length,
+        cancelled: cancelled.length,
+        noShows: noShows.length,
+        revenueKobo: completed.reduce((sum, b) => sum + b.priceKobo, 0),
+        collectedKobo: bookings.filter((b) => b.status !== 'cancelled').reduce((sum, b) => sum + (b.amountPaidKobo || 0), 0),
+        marketplaceBookings: marketplace.length,
+        marketplaceRevenueKobo: marketplaceCompleted.reduce((sum, b) => sum + b.priceKobo, 0),
+        repeatCustomers,
+        noShowRate,
+      },
+      topServices: [...serviceMap.values()].sort((a, b) => b.revenueKobo - a.revenueKobo).slice(0, 5),
+      recentBookings: bookings
+        .slice()
+        .sort((a, b) => new Date(b.startAt).getTime() - new Date(a.startAt).getTime())
+        .slice(0, 5)
+        .map((b) => ({ ...b, id: b._id.toString() })),
     };
   }
 

@@ -7,7 +7,7 @@ import { BookingsService } from './bookings.service';
 import { PaymentsService } from '../payments/payments.service';
 import { AvailabilityService } from './availability.service';
 import {
-  AvailabilityQueryDto, BookingQueryDto, BookingStatusDto, CancelBookingDto,
+  AvailabilityQueryDto, BookingMetricsQueryDto, BookingQueryDto, BookingStatusDto, CancelBookingDto,
   CreateBookingDto, CreateRecurringBookingDto, RefundBookingDto, RescheduleBookingDto,
 } from './booking.dto';
 
@@ -25,6 +25,12 @@ export class BookingsController {
   @Permissions(PERMISSIONS.BOOKINGS_READ)
   list(@CurrentBusiness() businessId: string, @Query() query: BookingQueryDto) {
     return this.bookings.list(businessId, query);
+  }
+
+  @Get('metrics')
+  @Permissions(PERMISSIONS.BOOKINGS_READ)
+  metrics(@CurrentBusiness() businessId: string, @Query() query: BookingMetricsQueryDto) {
+    return this.bookings.metrics(businessId, query);
   }
 
   @Get('calendar-feed')

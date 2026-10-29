@@ -190,3 +190,20 @@ export class AvailabilityQueryDto {
   @IsOptional()
   durationMinutes?: number;
 }
+
+export class BookingMetricsQueryDto {
+  @ApiPropertyOptional({ enum: ['today', 'week', 'month', 'last_month', 'custom'] })
+  @IsIn(['today', 'week', 'month', 'last_month', 'custom'])
+  @IsOptional()
+  range?: 'today' | 'week' | 'month' | 'last_month' | 'custom';
+
+  @ApiPropertyOptional({ example: '2026-11-01' })
+  @IsString()
+  @IsOptional()
+  from?: string;
+
+  @ApiPropertyOptional({ example: '2026-11-30' })
+  @IsString()
+  @IsOptional()
+  to?: string;
+}

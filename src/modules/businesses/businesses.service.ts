@@ -291,16 +291,19 @@ export class BusinessesService {
       this.services.countDocuments({ businessId, isActive: true }).exec(),
       this.orders.countDocuments({ businessId, status: { $in: ['paid', 'delivered'] } }).exec(),
     ]);
-    const serviceMode = business.businessMode === 'services';
-    const steps = [
+    const serviceMode = business.businessMode === 'services' || business.businessMode === 'hybrid';
+    const steps = serviceMode ? [
       { key: 'account', label: 'Create your account', done: true, href: '/app' },
       { key: 'brand', label: 'Add your logo', done: Boolean(business.logoUrl), href: '/app/settings?tab=business' },
-      serviceMode
-        ? { key: 'service', label: 'Add your first service', done: serviceCount > 0, href: '/app/services' }
-        : { key: 'product', label: 'Add your first product', done: productCount > 0, href: '/app/products/new' },
-      serviceMode
-        ? { key: 'booking', label: 'Take your first booking', done: Boolean(business.firstSaleAt), href: '/app/bookings/new' }
-        : { key: 'sale', label: 'Record your first sale', done: saleCount > 0 || Boolean(business.firstSaleAt), href: '/app/sales/new' },
+      { key: 'service', label: 'Add your first service', done: serviceCount > 0, href: '/app/services' },
+      { key: 'availability', label: 'Set your availability', done: Boolean(business.bookingSettings?.enabled), href: '/app/bookings/settings' },
+      { key: 'publish', label: 'Publish your booking page', done: Boolean(business.storefrontPublished), href: '/app/website' },
+      { key: 'booking', label: 'Take your first booking', done: Boolean(business.firstSaleAt), href: '/app/bookings/new' },
+    ] : [
+      { key: 'account', label: 'Create your account', done: true, href: '/app' },
+      { key: 'brand', label: 'Add your logo', done: Boolean(business.logoUrl), href: '/app/settings?tab=business' },
+      { key: 'product', label: 'Add your first product', done: productCount > 0, href: '/app/products/new' },
+      { key: 'sale', label: 'Record your first sale', done: saleCount > 0 || Boolean(business.firstSaleAt), href: '/app/sales/new' },
       { key: 'profit', label: 'See your first profit number', done: Boolean(business.firstProfitAt), href: '/app/reports' },
     ];
     const completed = steps.filter((s) => s.done).length;
