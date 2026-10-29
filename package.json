@@ -12,7 +12,8 @@
     "test:e2e": "jest --config ./test/jest-e2e.json --runInBand",
     "test:watch": "jest --watch",
     "lint": "tsc --noEmit",
-    "seed:prod": "node dist/seeds/seed.js"
+    "seed:prod": "node dist/seeds/seed.js",
+    "admin:reset": "node scripts/reset-admin.js"
   },
   "dependencies": {
     "@nestjs/common": "^11.2.8",
