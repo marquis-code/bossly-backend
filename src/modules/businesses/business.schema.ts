@@ -181,6 +181,9 @@ export class Business {
   campusVerified: boolean;
 
   @Prop({ type: Date, default: null })
+  verificationRequestedAt: Date | null;
+
+  @Prop({ type: Date, default: null })
   campusVerifiedAt: Date | null;
 
   @Prop({ type: Number, default: 5, min: 0, max: 30 })

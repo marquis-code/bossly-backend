@@ -73,13 +73,22 @@ export class MarketplaceService {
     };
   }
 
+  async requestVerification(businessId: string) {
+    const business = await this.businesses.findById(businessId).select('businessMode name').lean().exec();
+    if (!business) throw new NotFoundException('Business not found.');
+    if (!['services', 'hybrid'].includes(business.businessMode)) throw new NotFoundException('Only service businesses can request marketplace verification.');
+    await this.businesses.updateOne({ _id: businessId }, { $set: { verificationRequestedAt: new Date() } }).exec();
+    return { requested: true, message: 'Your verification request is in. We review new providers within 48 hours.' };
+  }
+
   async adminBusinesses(campus?: string) {
     const filter: Record<string, unknown> = { businessMode: { $in: ['services', 'hybrid'] }, ...(campus ? { campusCode: campus } : {}) };
-    const businesses = await this.businesses.find(filter).select('name slug campusCode campusName campusVerified campusVerifiedAt createdAt firstSaleAt').sort({ campusCode: 1, name: 1 }).limit(300).lean().exec();
+    const businesses = await this.businesses.find(filter).select('name slug campusCode campusName campusVerified campusVerifiedAt verificationRequestedAt storefrontPublished createdAt firstSaleAt').sort({ campusCode: 1, name: 1 }).limit(300).lean().exec();
     return businesses.map((business) => ({
       id: business._id.toString(), name: business.name, slug: business.slug,
       campusCode: business.campusCode, campusName: business.campusName,
       verified: Boolean(business.campusVerified), verifiedAt: business.campusVerifiedAt,
+      verificationRequestedAt: business.verificationRequestedAt || null, storefrontPublished: Boolean(business.storefrontPublished),
       createdAt: business.createdAt, firstSaleAt: business.firstSaleAt,
     }));
   }

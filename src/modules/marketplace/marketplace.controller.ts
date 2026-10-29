@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Patch, Body, Query } from '@nestjs/common';
+import { Controller, Get, Param, Patch, Post, Body, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { IsBoolean, IsIn, IsOptional, IsString } from 'class-validator';
 import { Public } from '../../common/decorators/public.decorator';
@@ -27,6 +27,12 @@ export class MarketplaceController {
   @Get('mine')
   mine(@CurrentBusiness() businessId: string) {
     return this.marketplace.mine(businessId);
+  }
+
+  @ApiBearerAuth()
+  @Post('request-verification')
+  requestVerification(@CurrentBusiness() businessId: string) {
+    return this.marketplace.requestVerification(businessId);
   }
 }
 

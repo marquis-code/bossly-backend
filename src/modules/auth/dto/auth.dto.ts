@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
   IsEmail,
+  IsIn,
   IsOptional,
   IsString,
   Length,
@@ -40,8 +41,19 @@ export class RegisterDto {
   @ApiPropertyOptional({ example: 'thrift' })
   @IsString()
   @IsOptional()
-  @MaxLength(40)
+  @MaxLength(60)
   category?: string;
+
+  @ApiPropertyOptional({ example: 'services', enum: ['products', 'services', 'hybrid'] })
+  @IsIn(['products', 'services', 'hybrid'])
+  @IsOptional()
+  businessMode?: 'products' | 'services' | 'hybrid';
+
+  @ApiPropertyOptional({ example: 'Yaba, Lagos' })
+  @IsString()
+  @IsOptional()
+  @MaxLength(120)
+  address?: string;
 
   @ApiPropertyOptional({ example: '08031234567' })
   @IsString()
@@ -194,8 +206,19 @@ export class PhoneStartDto {
   @ApiPropertyOptional()
   @IsString()
   @IsOptional()
-  @MaxLength(40)
+  @MaxLength(60)
   category?: string;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  @MaxLength(120)
+  address?: string;
+
+  @ApiPropertyOptional({ enum: ['products', 'services', 'hybrid'] })
+  @IsIn(['products', 'services', 'hybrid'])
+  @IsOptional()
+  businessMode?: 'products' | 'services' | 'hybrid';
 
   @ApiPropertyOptional()
   @IsString()

@@ -142,6 +142,8 @@ export class AuthService {
               slug,
               ownerId: user._id.toString(),
               category: dto.category || 'other',
+              businessMode: dto.businessMode || 'products',
+              address: dto.address || '',
               email,
               publicPhone: phone,
               whatsappNumber: phone,
@@ -249,7 +251,7 @@ export class AuthService {
           codeHash: sha256(code), expiresAt: new Date(Date.now() + 10 * 60 * 1000), consumedAt: null,
           name: dto.name?.trim() || existing?.name || '', businessName: dto.businessName?.trim() || '',
           email: dto.email?.toLowerCase() || existing?.email || null,
-          category: dto.category || 'other', campus: dto.campus || null, ambassador: dto.ambassador || null,
+          category: dto.category || 'other', businessMode: dto.businessMode || 'products', address: dto.address || '', campus: dto.campus || null, ambassador: dto.ambassador || null,
         },
       },
       { upsert: true, new: true },
@@ -291,6 +293,7 @@ export class AuthService {
     return this.register({
       name: pending.name || 'Ojaly user', businessName: pending.businessName || 'My business',
       email, password: `A1${randomToken(20)}`, phone, category: pending.category || 'other',
+      businessMode: pending.businessMode || 'products', address: pending.address || '',
       campus: pending.campus || undefined, ambassador: pending.ambassador || undefined,
     }, meta);
   }

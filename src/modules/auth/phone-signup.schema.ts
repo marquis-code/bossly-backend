@@ -33,6 +33,12 @@ export class PhoneSignup {
   @Prop({ type: String, default: 'other' })
   category: string;
 
+  @Prop({ type: String, default: 'products' })
+  businessMode: 'products' | 'services' | 'hybrid';
+
+  @Prop({ type: String, default: '' })
+  address: string;
+
   @Prop({ type: String, default: null })
   campus: string | null;
 
