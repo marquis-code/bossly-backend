@@ -479,6 +479,10 @@ export class AuthService {
 
   async forgotPassword(dto: ForgotPasswordDto): Promise<{ sent: true }> {
     const user = await this.users.findOne({ email: dto.email.toLowerCase().trim() }).exec();
+    if (!user) {
+      this.logger.warn(`Password reset requested for an unknown account: ${this.maskEmail(dto.email)}`);
+      return { sent: true };
+    }
     if (user) {
       const token = randomToken(32);
       await this.users.updateOne(
@@ -491,12 +495,13 @@ export class AuthService {
         },
       ).exec();
       const mail = resetPasswordEmail(user.name, `${this.config.get<string>('appUrl')}/reset-password?token=${token}`);
-      await this.mail.send({
+      const result = await this.mail.send({
         to: user.email,
         subject: mail.subject,
         html: mail.html,
         template: 'password_reset',
       });
+      if (!result.sent) this.logger.error(`Password reset email was not delivered for ${this.maskEmail(user.email)}`);
     }
     return { sent: true };
   }
@@ -651,5 +656,11 @@ export class AuthService {
     if (match[2] === 'd') return value;
     if (match[2] === 'h') return value / 24;
     return value / 1440;
+  }
+
+  private maskEmail(email: string): string {
+    const [name, domain] = email.split('@');
+    if (!domain) return '***';
+    return `${name.slice(0, 2)}***@${domain}`;
   }
 }
