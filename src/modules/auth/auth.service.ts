@@ -23,7 +23,7 @@ import { Business, BusinessDocument } from '../businesses/business.schema';
 import { Membership, MembershipDocument } from '../memberships/membership.schema';
 import { PlansService } from '../plans/plans.service';
 import { MailService } from '../mail/mail.service';
-import { welcomeEmail, verificationEmail, resetPasswordEmail } from '../mail/email-templates';
+import { welcomeEmail, verificationEmail, resetPasswordEmail, phoneCodeEmail } from '../mail/email-templates';
 import { AuditService } from '../audit/audit.service';
 import { AffiliatesService } from '../affiliates/affiliates.service';
 import { RefreshSession, RefreshSessionDocument } from './refresh-session.schema';
@@ -282,9 +282,9 @@ export class AuthService {
     if (smsResult.sent) channel = 'sms';
     if (!channel && (dto.email || existing?.email)) {
       const to = (dto.email || existing?.email) as string;
+      const email = phoneCodeEmail(dto.name || existing?.name || 'there', code);
       await this.mail.send({
-        to, subject: 'Your Ojaly sign-in code',
-        html: `<p>Your Ojaly code is <strong style="font-size:22px;letter-spacing:4px">${code}</strong>.</p><p>It expires in 10 minutes. If you did not request it, ignore this email.</p>`,
+        to, subject: email.subject, html: email.html,
         template: 'phone_login_code',
       }).catch(() => undefined);
       channel = 'email';

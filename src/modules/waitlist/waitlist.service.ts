@@ -4,6 +4,7 @@ import { Model } from 'mongoose';
 import { Business, BusinessDocument } from '../businesses/business.schema';
 import { Service, ServiceDocument } from '../services/service.schema';
 import { MailService } from '../mail/mail.service';
+import { waitlistOpeningEmail } from '../mail/email-templates';
 import { NotificationsService } from '../notifications/notifications.service';
 import { WhatsappClientService } from '../whatsapp/whatsapp-client.service';
 import { SmsService } from '../sms/sms.service';
@@ -83,10 +84,15 @@ export class WaitlistService {
     const when = `${entry.preferredFrom.toISOString().slice(0, 10)} – ${entry.preferredTo.toISOString().slice(0, 10)}`;
     const link = `${this.configUrl()}/s/${business?.slug || ''}/services/${entry.serviceId}`;
     if (entry.customerEmail) {
+      const email = waitlistOpeningEmail({
+        customerName: entry.customerName, businessName: business?.name || 'your business',
+        businessLogo: business?.logoUrl, businessTagline: business?.tagline, businessSlug: business?.slug,
+        serviceName: entry.serviceName, windowLabel: when, bookingUrl: link,
+      });
       await this.mail.send({
         to: entry.customerEmail,
-        subject: `A spot may be open for ${entry.serviceName}`,
-        html: `<p>Hi ${entry.customerName},</p><p>A slot may have opened for <strong>${entry.serviceName}</strong> at ${business?.name || 'your business'} in your preferred window (${when}).</p><p><a href="${link}">Check availability and book</a></p>`,
+        subject: email.subject,
+        html: email.html,
         template: 'waitlist_opening',
         businessId,
       }).catch(() => undefined);

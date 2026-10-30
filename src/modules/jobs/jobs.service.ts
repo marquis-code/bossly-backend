@@ -10,6 +10,7 @@ import { ReceiptsService } from '../receipts/receipts.service';
 import { PaymentsService } from '../payments/payments.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { MailService } from '../mail/mail.service';
+import { bookingReminderEmail } from '../mail/email-templates';
 import { paymentFailedEmail } from '../mail/email-templates';
 import { ConfigService } from '@nestjs/config';
 import { Business, BusinessDocument } from '../businesses/business.schema';
@@ -61,10 +62,24 @@ export class JobsService {
           hour: 'numeric', minute: '2-digit',
         }).format(booking.startAt);
         if (booking.customerEmail) {
+          const dateLabel = new Intl.DateTimeFormat('en-NG', {
+            timeZone: booking.timezone, weekday: 'short', day: 'numeric', month: 'long', year: 'numeric',
+          }).format(booking.startAt);
+          const timeLabel = new Intl.DateTimeFormat('en-NG', {
+            timeZone: booking.timezone, hour: 'numeric', minute: '2-digit',
+          }).format(booking.startAt);
+          const email = bookingReminderEmail({
+            customerName: booking.customerName, businessName: business?.name || 'your appointment',
+            businessLogo: business?.logoUrl, businessTagline: business?.tagline, businessSlug: business?.slug,
+            serviceName: booking.serviceName, providerName: booking.providerName, dateLabel, timeLabel,
+            reference: booking.bookingNumber,
+            manageUrl: `${this.config.get('appUrl')}/booking/${booking.publicToken}`,
+            calendarUrl: `${this.config.get('apiUrl')}/public/bookings/${booking.publicToken}/calendar.ics`,
+          });
           await this.mail.send({
             to: booking.customerEmail,
-            subject: `Reminder: ${booking.serviceName} at ${business?.name || 'your appointment'}`,
-            html: `<p>Hi ${booking.customerName},</p><p>A reminder that your <strong>${booking.serviceName}</strong> with <strong>${booking.providerName}</strong> is on <strong>${when}</strong>.</p><p>Reference: ${booking.bookingNumber}</p><p><a href="${this.config.get('appUrl')}/booking/${booking.publicToken}">View or change your booking</a></p>`,
+            subject: email.subject,
+            html: email.html,
             template: 'booking_reminder',
             businessId: booking.businessId,
           }).catch(() => undefined);

@@ -11,6 +11,7 @@ import { Provider, ProviderDocument } from '../providers/provider.schema';
 import { Service, ServiceDocument } from '../services/service.schema';
 import { NotificationsService } from '../notifications/notifications.service';
 import { MailService } from '../mail/mail.service';
+import { bookingConfirmedEmail, bookingReviewEmail } from '../mail/email-templates';
 import { SmsService } from '../sms/sms.service';
 import { PackagesService } from '../packages/packages.service';
 import { CalendarService } from '../calendar/calendar.service';
@@ -684,10 +685,16 @@ export class BookingsService {
       data: { bookingId: booking._id.toString(), reviewUrl: link },
     });
     if (!booking.customerEmail) return;
+    const review = bookingReviewEmail({
+      customerName: booking.customerName, businessName: business.name,
+      businessLogo: business.logoUrl, businessTagline: business.tagline, businessSlug: business.slug,
+      serviceName: booking.serviceName, providerName: booking.providerName, reviewUrl: link,
+      policy: business.bookingSettings?.policy || null,
+    });
     await this.mail.send({
       to: booking.customerEmail,
-      subject: `How was your ${booking.serviceName}?`,
-      html: `<p>Hi ${booking.customerName},</p><p>Thanks for visiting <strong>${business.name}</strong>. How was your <strong>${booking.serviceName}</strong> with ${booking.providerName}?</p><p><a href="${link}">Leave a quick review</a> — it takes less than a minute.</p><p>${business.bookingSettings?.policy || ''}</p>`,
+      subject: review.subject,
+      html: review.html,
       template: 'booking_review_request',
       businessId: booking.businessId,
     });
@@ -726,6 +733,12 @@ export class BookingsService {
       timeZone: booking.timezone, weekday: 'short', day: 'numeric', month: 'short',
       hour: 'numeric', minute: '2-digit',
     }).format(booking.startAt);
+    const dateLabel = new Intl.DateTimeFormat('en-NG', {
+      timeZone: booking.timezone, weekday: 'short', day: 'numeric', month: 'long', year: 'numeric',
+    }).format(booking.startAt);
+    const timeLabel = new Intl.DateTimeFormat('en-NG', {
+      timeZone: booking.timezone, hour: 'numeric', minute: '2-digit',
+    }).format(booking.startAt);
     await this.notifications.create({
       businessId: booking.businessId,
       type: 'booking',
@@ -741,10 +754,20 @@ export class BookingsService {
       }).catch(() => undefined);
     }
     if (booking.customerEmail) {
+      const confirmation = bookingConfirmedEmail({
+        customerName: booking.customerName, businessName: business.name,
+        businessLogo: business.logoUrl, businessTagline: business.tagline, businessSlug: business.slug,
+        serviceName: booking.serviceName, providerName: booking.providerName,
+        dateLabel, timeLabel, durationMinutes: booking.durationMinutes, reference: booking.bookingNumber,
+        manageUrl: `${this.config.get('appUrl')}/booking/${booking.publicToken}`,
+        calendarUrl: `${this.config.get('apiUrl')}/public/bookings/${booking.publicToken}/calendar.ics`,
+        priceKobo: booking.priceKobo, depositKobo: booking.depositKobo || 0,
+        policy: business.bookingSettings?.policy || null,
+      });
       await this.mail.send({
         to: booking.customerEmail,
-        subject: `Your ${booking.serviceName} appointment at ${business.name}`,
-        html: `<p>Hi ${booking.customerName},</p><p>Your <strong>${booking.serviceName}</strong> appointment with <strong>${booking.providerName}</strong> is booked for <strong>${when}</strong>.</p><p>Reference: ${booking.bookingNumber}</p><p><a href="${this.config.get('appUrl')}/booking/${booking.publicToken}">View or manage your booking</a> · <a href="${this.config.get('apiUrl')}/public/bookings/${booking.publicToken}/calendar.ics">Add to calendar</a></p><p>${business.bookingSettings?.policy || ''}</p>`,
+        subject: confirmation.subject,
+        html: confirmation.html,
         template: 'booking_confirmation',
         businessId: booking.businessId,
       });

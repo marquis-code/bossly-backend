@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Business, BusinessDocument } from '../businesses/business.schema';
 import { MailService } from '../mail/mail.service';
+import { campusApplicationEmail } from '../mail/email-templates';
 import { normalizeNigerianPhone } from '../../common/utils/phone';
 import { sanitizeText } from '../../common/utils/sanitize';
 import { ApplyCampusDto } from './campus.dto';
@@ -65,10 +66,12 @@ export class CampusService {
       socials: sanitizeText(dto.socials, 300),
       why: sanitizeText(dto.why, 1000),
     });
+    const email = campusApplicationEmail({
+      name: application.name, phone: application.phone, email: application.email,
+      year: application.year, socials: application.socials, why: application.why,
+    }, campus.name);
     await this.mail.send({
-      to: 'hello@ojaly.org',
-      subject: `Campus ambassador application · ${campus.shortName}`,
-      html: `<p><strong>${application.name}</strong> applied for ${campus.name}.</p><p>Phone: ${application.phone}<br>Email: ${application.email || '—'}<br>Year: ${application.year || '—'}<br>Socials: ${application.socials || '—'}</p><p>${application.why || ''}</p>`,
+      to: 'hello@ojaly.org', subject: email.subject, html: email.html,
       template: 'campus_application',
     }).catch(() => undefined);
     return { application: this.view(application) };
