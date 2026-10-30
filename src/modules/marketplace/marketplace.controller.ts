@@ -18,6 +18,12 @@ export class MarketplaceController {
   constructor(private readonly marketplace: MarketplaceService) {}
 
   @Public()
+  @Get('demo')
+  demo() {
+    return this.marketplace.demoBusinesses();
+  }
+
+  @Public()
   @Get()
   search(@Query() query: MarketplaceQueryDto) {
     return this.marketplace.search(query);

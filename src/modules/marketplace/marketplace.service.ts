@@ -5,6 +5,7 @@ import { Business, BusinessDocument } from '../businesses/business.schema';
 import { Booking, BookingDocument } from '../bookings/booking.schema';
 import { Review, ReviewDocument } from '../reviews/review.schema';
 import { Service, ServiceDocument } from '../services/service.schema';
+import { Product, ProductDocument } from '../products/product.schema';
 import { LAGOS_CAMPUSES, campusByCode } from '../campus/campus.constants';
 
 @Injectable()
@@ -13,6 +14,7 @@ export class MarketplaceService {
     @InjectModel(Business.name) private readonly businesses: Model<BusinessDocument>,
     @InjectModel(Service.name) private readonly services: Model<ServiceDocument>,
     @InjectModel(Review.name) private readonly reviews: Model<ReviewDocument>,
+    @InjectModel(Product.name) private readonly products: Model<ProductDocument>,
     @InjectModel(Booking.name) private readonly bookings: Model<BookingDocument>,
   ) {}
 
@@ -54,6 +56,36 @@ export class MarketplaceService {
     }).filter(Boolean) as Record<string, unknown>[];
     result.sort((a, b) => Number(b.rating) - Number(a.rating) || Number(b.reviewCount) - Number(a.reviewCount));
     return { campuses: LAGOS_CAMPUSES, categories, businesses: result, total: result.length };
+  }
+
+  async demoBusinesses() {
+    const businesses = await this.businesses.find({ isDemo: true, storefrontPublished: true }).select('name slug tagline description logoUrl bannerUrl businessMode campusCode campusName address').limit(12).lean().exec();
+    if (!businesses.length) return [];
+    const ids = businesses.map((business) => business._id.toString());
+    const [services, products] = await Promise.all([
+      this.services.find({ businessId: { $in: ids }, isActive: true, isPublic: true }).select('businessId name priceKobo category').lean().exec(),
+      this.products.find({ businessId: { $in: ids }, isActive: true }).select('businessId name category variants priceKobo').lean().exec(),
+    ]);
+    return businesses.map((business) => {
+      const ownServices = services.filter((service) => service.businessId === business._id.toString());
+      const ownProducts = products.filter((product) => product.businessId === business._id.toString());
+      const prices = [
+        ...ownServices.map((service) => service.priceKobo),
+        ...ownProducts.flatMap((product) => (product.variants || []).map((variant) => variant.priceKobo)),
+        ...ownProducts.map((product) => product.priceKobo),
+      ].filter((price) => typeof price === 'number' && price > 0);
+      const isService = business.businessMode === 'services';
+      return {
+        id: business._id.toString(), name: business.name, slug: business.slug,
+        tagline: business.tagline || business.description || '', logoUrl: business.logoUrl, bannerUrl: business.bannerUrl,
+        mode: isService ? 'services' : business.businessMode, campusCode: business.campusCode || 'Lagos',
+        campusName: business.campusName || 'Lagos', address: business.address || '',
+        serviceCount: ownServices.length, productCount: ownProducts.length,
+        startingPriceKobo: prices.length ? Math.min(...prices) : null,
+        href: isService ? `/s/${business.slug}/services` : `/s/${business.slug}`,
+        cta: isService ? 'Book a service' : 'Shop products',
+      };
+    });
   }
 
   async mine(businessId: string) {

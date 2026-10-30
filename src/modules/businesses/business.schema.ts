@@ -178,6 +178,9 @@ export class Business {
   campusAmbassadorCode: string | null;
 
   @Prop({ type: Boolean, default: false, index: true })
+  isDemo: boolean;
+
+  @Prop({ type: Boolean, default: false, index: true })
   campusVerified: boolean;
 
   @Prop({ type: Date, default: null })
