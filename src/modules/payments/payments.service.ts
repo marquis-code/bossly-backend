@@ -93,7 +93,7 @@ export class PaymentsService {
       email,
       amountKobo: outstanding,
       reference,
-      callbackUrl: `${this.config.get('appUrl')}/payment/callback?reference=${reference}`,
+      callbackUrl: `${this.config.get('appUrl')}/payment/callback`,
       metadata: { purpose: 'order', orderId, businessId, customerName: order.customerName },
     });
     await this.payments.create({
@@ -122,7 +122,7 @@ export class PaymentsService {
       email,
       amountKobo: debt.balanceKobo,
       reference,
-      callbackUrl: `${this.config.get('appUrl')}/payment/callback?reference=${reference}`,
+      callbackUrl: `${this.config.get('appUrl')}/payment/callback`,
       metadata: { purpose: 'debt', debtId, businessId, customerName: debt.customerName },
     });
     await this.payments.create({
@@ -151,7 +151,7 @@ export class PaymentsService {
       email,
       amountKobo: invoice.totalKobo,
       reference,
-      callbackUrl: `${this.config.get('appUrl')}/payment/callback?reference=${reference}`,
+      callbackUrl: `${this.config.get('appUrl')}/payment/callback`,
       metadata: { purpose: 'invoice', invoiceId, businessId, invoiceNumber: invoice.invoiceNumber },
     });
     await this.payments.create({
@@ -182,7 +182,7 @@ export class PaymentsService {
       email,
       amountKobo,
       reference,
-      callbackUrl: `${this.config.get('appUrl')}/payment/callback?reference=${reference}`,
+      callbackUrl: `${this.config.get('appUrl')}/payment/callback`,
       metadata: { purpose: 'booking', bookingId, businessId, bookingNumber: booking.bookingNumber },
     });
     await this.payments.create({
@@ -256,7 +256,7 @@ export class PaymentsService {
       email: resolved,
       amountKobo,
       reference,
-      callbackUrl: `${this.config.get('appUrl')}/payment/callback?reference=${reference}`,
+      callbackUrl: `${this.config.get('appUrl')}/payment/callback`,
       metadata: { purpose: 'booking', bookingId: booking._id.toString(), businessId: booking.businessId, bookingNumber: booking.bookingNumber },
     });
     await this.payments.create({
@@ -278,7 +278,7 @@ export class PaymentsService {
       email,
       amountKobo: debt.balanceKobo,
       reference,
-      callbackUrl: `${this.config.get('appUrl')}/payment/callback?reference=${reference}`,
+      callbackUrl: `${this.config.get('appUrl')}/payment/callback`,
       metadata: { purpose: 'debt', debtId: debt._id.toString(), businessId: debt.businessId, customerName: debt.customerName },
     });
     await this.payments.create({
@@ -308,7 +308,7 @@ export class PaymentsService {
       email: resolved,
       amountKobo: outstanding,
       reference,
-      callbackUrl: `${this.config.get('appUrl')}/payment/callback?reference=${reference}`,
+      callbackUrl: `${this.config.get('appUrl')}/payment/callback`,
       metadata: { purpose: 'order', orderId: order._id.toString(), businessId: order.businessId, orderNumber: order.orderNumber },
     });
     await this.payments.create({
@@ -336,7 +336,7 @@ export class PaymentsService {
       email: resolved,
       amountKobo: invoice.totalKobo,
       reference,
-      callbackUrl: `${this.config.get('appUrl')}/payment/callback?reference=${reference}`,
+      callbackUrl: `${this.config.get('appUrl')}/payment/callback`,
       metadata: { purpose: 'invoice', invoiceId: invoice._id.toString(), businessId: invoice.businessId },
     });
     await this.payments.create({
@@ -383,7 +383,7 @@ export class PaymentsService {
       email,
       amountKobo: amount,
       reference,
-      callbackUrl: `${this.config.get('appUrl')}/payment/callback?reference=${reference}`,
+      callbackUrl: `${this.config.get('appUrl')}/payment/callback`,
       planCode,
       metadata: {
         purpose: 'subscription',
