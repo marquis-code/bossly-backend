@@ -110,7 +110,7 @@ export class CustomRequestsService {
     request.messages.push({ sender: 'business', name: 'Business', body: redaction.text, createdAt: new Date(), redacted: redaction.redacted });
     await request.save();
     const business = await this.businesses.findById(businessId).lean().exec();
-    if (business) await this.sendStatusEmail(request, business, 'New message about your request', body, 'Open request');
+    if (business) await this.sendStatusEmail(request, business, 'New message about your request', redaction.text, 'Open request');
     return this.vendorView(request);
   }
 
