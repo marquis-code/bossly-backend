@@ -149,7 +149,7 @@ Guidelines for "command":
 - If unclear or not business related: set intent="other" and command=""`;
 
     try {
-      const model = this.config.get<string>('llm.geminiModel') || 'gemini-1.5-flash';
+      const model = this.config.get<string>('llm.geminiModel') || 'gemini-3.8-flash';
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`;
 
       const response = await fetch(url, {

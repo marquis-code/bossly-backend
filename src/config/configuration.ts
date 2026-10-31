@@ -145,7 +145,7 @@ export default (): AppConfig => {
     baseUrl: process.env.LLM_BASE_URL || 'https://api.openai.com/v1',
     model: process.env.LLM_MODEL || 'gpt-4o-mini',
     geminiApiKey: process.env.GEMINI_API_KEY,
-    geminiModel: process.env.GEMINI_MODEL || 'gemini-1.5-flash',
+    geminiModel: process.env.GEMINI_MODEL || 'gemini-3.8-flash',
   },
   seed: {
     email: process.env.SEED_SUPER_ADMIN_EMAIL,
