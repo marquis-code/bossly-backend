@@ -158,7 +158,7 @@ export class WhatsappWebhookController {
 
       for (const item of items) {
         const key = item.key as Record<string, unknown> | undefined;
-        if (!key || key.fromMe === true) continue; // Skip messages sent by the bot itself
+        if (!key) continue;
 
         const remoteJid = String(key.remoteJid || '');
         if (!remoteJid || remoteJid.endsWith('@g.us') || remoteJid.includes('status@broadcast')) {
@@ -168,6 +168,14 @@ export class WhatsappWebhookController {
         const phone = remoteJid.replace(/@.*$/, '');
         const id = String(key.id || '');
         if (!phone || !id) continue;
+
+        // If fromMe is true, only skip if it was an automated message sent by our API.
+        // This allows users to test/use the bot by texting their own number ("Message yourself").
+        if (key.fromMe === true) {
+          if (item.source === 'api') continue;
+          const isOutbound = await this.messages.findOne({ metaMessageId: id, direction: 'outbound' }).lean().exec();
+          if (isOutbound) continue;
+        }
 
         const messageObj = item.message as Record<string, unknown> | undefined;
         const text = String(
