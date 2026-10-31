@@ -167,6 +167,7 @@ export class BookingsService {
     source: 'dashboard' | 'storefront' | 'whatsapp' | 'walk_in' = 'dashboard',
     series?: { id: string; index: number; total: number },
     notify = true,
+    overrides?: { priceKobo?: number; durationMinutes?: number; depositKobo?: number; customRequestId?: string },
   ) {
     const [business, service] = await Promise.all([
       this.businesses.findById(businessId).lean().exec(),
@@ -184,19 +185,21 @@ export class BookingsService {
     const marketplaceCampus = dto.marketplaceCampus ? { code: dto.marketplaceCampus.trim().toUpperCase() } : null;
     const effectiveSource = marketplaceCampus ? 'marketplace' : source;
     const addonMinutes = addOns.reduce((sum, a) => sum + (a.durationMinutes || 0), 0);
-    const durationMinutes = service.durationMinutes + addonMinutes;
+    const durationMinutes = overrides?.durationMinutes ?? service.durationMinutes + addonMinutes;
     const timezone = business.timezone || 'Africa/Lagos';
     await this.availability.assertSlot(businessId, service._id.toString(), startAt, String(provider._id), timezone, durationMinutes, { ignoreWindow: effectiveSource !== 'storefront' && effectiveSource !== 'marketplace' });
 
-    const totalKobo = service.priceKobo + addOns.reduce((sum, a) => sum + a.priceKobo, 0);
+    const totalKobo = overrides?.priceKobo ?? service.priceKobo + addOns.reduce((sum, a) => sum + a.priceKobo, 0);
     const packageValueKobo = packageRedemption ? totalKobo : 0;
     const chargeKobo = packageRedemption ? 0 : totalKobo;
     const marketplaceFeePercent = marketplaceCampus ? (business.marketplaceFeePercent ?? 5) : 0;
     const marketplaceFeeKobo = marketplaceCampus ? Math.round((chargeKobo * marketplaceFeePercent) / 100) : 0;
     const depositPercent = business.bookingSettings?.depositPercent || 0;
-    const depositKobo = packageRedemption ? 0 : service.requiresDeposit
-      ? Math.min(totalKobo, service.depositKobo || Math.round((totalKobo * depositPercent) / 100))
-      : 0;
+    const depositKobo = packageRedemption ? 0 : overrides?.depositKobo !== undefined
+      ? Math.min(totalKobo, Math.max(0, overrides.depositKobo))
+      : service.requiresDeposit
+        ? Math.min(totalKobo, service.depositKobo || Math.round((totalKobo * depositPercent) / 100))
+        : 0;
     const shouldConfirm = packageRedemption ? true : Boolean(business.bookingSettings?.autoConfirm) && depositKobo <= 0;
     const blockStartAt = addMinutes(startAt, -(service.bufferBeforeMinutes || 0));
     const endAt = addMinutes(startAt, durationMinutes);
@@ -269,6 +272,7 @@ export class BookingsService {
           marketplaceCampus: marketplaceCampus?.code || null,
           marketplaceFeePercent,
           marketplaceFeeKobo,
+          customRequestId: overrides?.customRequestId || null,
           packagePurchaseId: packageRedemption?.id || null,
           packageCode: packageRedemption?.redemptionCode || null,
           packageName: packageRedemption?.packageName || null,
@@ -803,6 +807,7 @@ export class BookingsService {
       marketplaceCampus: booking.marketplaceCampus,
       marketplaceFeePercent: booking.marketplaceFeePercent || 0,
       marketplaceFeeKobo: booking.marketplaceFeeKobo || 0,
+      customRequestId: booking.customRequestId || null,
       timezone: booking.timezone,
       addOns: booking.addOns,
       status: booking.status,

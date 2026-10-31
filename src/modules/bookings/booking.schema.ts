@@ -117,6 +117,9 @@ export class Booking {
   @Prop({ type: String, default: null, index: true })
   marketplaceCampus: string | null;
 
+  @Prop({ type: String, default: null, index: true })
+  customRequestId: string | null;
+
   @Prop({ type: Number, default: 0 })
   marketplaceFeePercent: number;
 

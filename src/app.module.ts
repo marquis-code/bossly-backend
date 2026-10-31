@@ -29,6 +29,7 @@ import { CampusModule } from './modules/campus/campus.module';
 import { CalendarModule } from './modules/calendar/calendar.module';
 import { AiModule } from './modules/ai/ai.module';
 import { MarketplaceModule } from './modules/marketplace/marketplace.module';
+import { CustomRequestsModule } from './modules/custom-requests/custom-requests.module';
 import { StockModule } from './modules/stock/stock.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { SalesModule } from './modules/sales/sales.module';
@@ -98,6 +99,7 @@ import { JwtModule } from '@nestjs/jwt';
     CalendarModule,
     AiModule,
     MarketplaceModule,
+    CustomRequestsModule,
     StockModule,
     CustomersModule,
     DebtsModule,
