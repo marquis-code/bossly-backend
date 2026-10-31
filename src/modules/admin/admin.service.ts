@@ -517,9 +517,19 @@ export class AdminService {
   async whatsappHealth() {
     const data = await this.whatsappHealthData();
     const recentFailures = await this.whatsappMessages.find({ status: 'failed', direction: 'outbound' }).sort({ createdAt: -1 }).limit(10).lean().exec();
+    const provider = this.config.get<string>('whatsapp.provider') || 'cloud';
+    const isConfigured = provider === 'evolution'
+      ? Boolean(this.config.get('whatsapp.evolutionApiUrl') && this.config.get('whatsapp.evolutionApiKey'))
+      : provider === '360dialog'
+      ? Boolean(this.config.get('whatsapp.d360ApiKey') && this.config.get('whatsapp.phoneNumberId'))
+      : Boolean(this.config.get('whatsapp.accessToken') && this.config.get('whatsapp.phoneNumberId'));
+    const identifier = provider === 'evolution'
+      ? (this.config.get('whatsapp.evolutionInstance') || this.config.get('whatsapp.platformNumber') || null)
+      : (this.config.get('whatsapp.phoneNumberId') || null);
     return {
-      configured: Boolean(this.config.get('whatsapp.accessToken') && this.config.get('whatsapp.phoneNumberId')),
-      phoneNumberId: this.config.get('whatsapp.phoneNumberId') || null,
+      configured: isConfigured,
+      provider,
+      phoneNumberId: identifier,
       webhookUrl: `${this.config.get('apiUrl')}/whatsapp/webhook`,
       ...data,
       recentFailures,
@@ -653,11 +663,18 @@ export class AdminService {
   }
 
   private integrationStatus() {
+    const provider = this.config.get<string>('whatsapp.provider') || 'cloud';
+    const isWhatsappConfigured = provider === 'evolution'
+      ? Boolean(this.config.get('whatsapp.evolutionApiUrl') && this.config.get('whatsapp.evolutionApiKey'))
+      : provider === '360dialog'
+      ? Boolean(this.config.get('whatsapp.d360ApiKey') && this.config.get('whatsapp.phoneNumberId'))
+      : Boolean(this.config.get('whatsapp.accessToken') && this.config.get('whatsapp.phoneNumberId'));
+
     return {
       cloudinary: Boolean(this.config.get('cloudinary.cloudName') && this.config.get('cloudinary.apiKey')),
       resend: Boolean(this.config.get('resend.apiKey')),
       paystack: Boolean(this.config.get('paystack.secretKey')),
-      whatsapp: Boolean(this.config.get('whatsapp.accessToken') && this.config.get('whatsapp.phoneNumberId')),
+      whatsapp: isWhatsappConfigured,
       llm: Boolean(this.config.get('llm.apiKey')),
     };
   }

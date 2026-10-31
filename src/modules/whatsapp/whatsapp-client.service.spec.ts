@@ -1,10 +1,14 @@
 import { WhatsappClientService } from './whatsapp-client.service';
 
-function setup(options: { configured?: boolean; lastInboundAt?: Date | null; fetchOk?: boolean } = {}) {
+function setup(options: { configured?: boolean; lastInboundAt?: Date | null; fetchOk?: boolean; provider?: string } = {}) {
   const values: Record<string, string> = {
+    'whatsapp.provider': options.provider || 'cloud',
     'whatsapp.accessToken': options.configured === false ? '' : 'EAAG-test-token',
     'whatsapp.phoneNumberId': options.configured === false ? '' : '123456789',
     'whatsapp.platformNumber': '+2348000000000',
+    'whatsapp.evolutionApiUrl': options.configured === false ? '' : 'https://evolution.example.com',
+    'whatsapp.evolutionApiKey': options.configured === false ? '' : 'evo-test-key',
+    'whatsapp.evolutionInstance': 'ojaly',
   };
   const config = { get: (key: string) => values[key] };
   const contact = { lastInboundAt: options.lastInboundAt ?? null };
@@ -75,5 +79,55 @@ describe('WhatsApp Cloud API client', () => {
     const result = await ctx.service.send({ businessId: 'biz', phone: '08031234567', text: 'Hello' });
     expect(result).toEqual({ sent: false, usedTemplate: false, reason: 'send_failed' });
     expect(ctx.create).toHaveBeenCalledWith(expect.objectContaining({ status: 'failed', error: 'Invalid token' }));
+  });
+
+  describe('Evolution API provider', () => {
+    it('sends free-form text directly outside the 24-hour window', async () => {
+      const ctx = setup({ provider: 'evolution', lastInboundAt: null });
+      const fetchMock = jest.fn(async () => ({
+        ok: true,
+        json: async () => ({ key: { id: 'evo.msg.1' } }),
+      }));
+      global.fetch = fetchMock as never;
+      const result = await ctx.service.send({ businessId: 'biz', phone: '08031234567', text: 'Daily summary: ₦50,000' });
+      expect(result).toEqual({ sent: true, usedTemplate: false });
+      const [url, req] = fetchMock.mock.calls[0] as unknown as [string, { headers: Record<string, string>; body: string }];
+      expect(url).toBe('https://evolution.example.com/message/sendText/ojaly');
+      expect(req.headers.apikey).toBe('evo-test-key');
+      const body = JSON.parse(req.body);
+      expect(body.number).toBe('2348031234567');
+      expect(body.text).toBe('Daily summary: ₦50,000');
+      expect(ctx.create).toHaveBeenCalledWith(expect.objectContaining({
+        status: 'sent',
+        direction: 'outbound',
+        phone: '2348031234567',
+        metaMessageId: 'evo.msg.1',
+      }));
+    });
+
+    it('logs skipped when Evolution API credentials are not configured', async () => {
+      const ctx = setup({ provider: 'evolution', configured: false });
+      const fetchMock = jest.fn();
+      global.fetch = fetchMock as never;
+      const result = await ctx.service.send({ businessId: 'biz', phone: '08031234567', text: 'Hello' });
+      expect(result.sent).toBe(false);
+      expect(result.reason).toBe('not_configured');
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('records failed outbound message when Evolution API returns an error', async () => {
+      const ctx = setup({ provider: 'evolution' });
+      global.fetch = jest.fn(async () => ({
+        ok: false,
+        status: 400,
+        json: async () => ({ message: 'Instance not connected' }),
+      })) as never;
+      const result = await ctx.service.send({ businessId: 'biz', phone: '08031234567', text: 'Hello' });
+      expect(result).toEqual({ sent: false, usedTemplate: false, reason: 'send_failed' });
+      expect(ctx.create).toHaveBeenCalledWith(expect.objectContaining({
+        status: 'failed',
+        error: 'Instance not connected',
+      }));
+    });
   });
 });

@@ -40,6 +40,13 @@ export class WhatsappSettingsController {
           verifyToken: Boolean(this.config.get('whatsapp.verifyToken')),
           platformNumber: Boolean(this.config.get('whatsapp.platformNumber')),
         }
+      : provider === 'evolution'
+      ? {
+          evolutionApiUrl: Boolean(this.config.get('whatsapp.evolutionApiUrl')),
+          evolutionApiKey: Boolean(this.config.get('whatsapp.evolutionApiKey')),
+          evolutionInstance: Boolean(this.config.get('whatsapp.evolutionInstance')),
+          platformNumber: Boolean(this.config.get('whatsapp.platformNumber')),
+        }
       : {
           accessToken: Boolean(this.config.get('whatsapp.accessToken')),
           phoneNumberId: Boolean(this.config.get('whatsapp.phoneNumberId')),

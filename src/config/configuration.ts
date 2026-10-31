@@ -42,6 +42,9 @@ export interface AppConfig {
     platformNumber?: string;
     d360ApiKey?: string;
     d360BaseUrl?: string;
+    evolutionApiUrl?: string;
+    evolutionApiKey?: string;
+    evolutionInstance?: string;
   };
   llm: { apiKey?: string; baseUrl: string; model: string };
   seed: { email?: string; password?: string };
@@ -133,6 +136,9 @@ export default (): AppConfig => {
     provider: process.env.WHATSAPP_PROVIDER || 'cloud',
     d360ApiKey: process.env.WHATSAPP_360DIALOG_API_KEY,
     d360BaseUrl: (process.env.WHATSAPP_360DIALOG_BASE_URL || 'https://waba-v2.360dialog.io').replace(/\/$/, ''),
+    evolutionApiUrl: (process.env.WHATSAPP_EVOLUTION_API_URL || '').replace(/\/$/, ''),
+    evolutionApiKey: process.env.WHATSAPP_EVOLUTION_API_KEY,
+    evolutionInstance: process.env.WHATSAPP_EVOLUTION_INSTANCE || 'ojaly',
   },
   llm: {
     apiKey: process.env.LLM_API_KEY,

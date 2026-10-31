@@ -37,6 +37,9 @@ export class WhatsappClientService {
   }
 
   get isConfigured(): boolean {
+    if (this.provider === 'evolution') {
+      return Boolean(this.config.get('whatsapp.evolutionApiUrl') && this.config.get('whatsapp.evolutionApiKey'));
+    }
     if (!this.config.get('whatsapp.phoneNumberId')) return false;
     if (this.provider === '360dialog') return Boolean(this.config.get('whatsapp.d360ApiKey'));
     return Boolean(this.config.get('whatsapp.accessToken'));
@@ -47,6 +50,7 @@ export class WhatsappClientService {
   }
 
   async withinCustomerWindow(phone: string): Promise<boolean> {
+    if (this.provider === 'evolution') return true;
     const normalized = normalizeNigerianPhone(phone) || phone;
     const contact = await this.contacts.findOne({ phone: normalized }).lean().exec();
     return Boolean(contact?.lastInboundAt && Date.now() - new Date(contact.lastInboundAt).getTime() < WINDOW_MS);
@@ -56,9 +60,52 @@ export class WhatsappClientService {
     const phone = normalizeNigerianPhone(input.phone);
     if (!phone) return { sent: false, usedTemplate: false, reason: 'Invalid phone number' };
     if (!this.isConfigured) {
-      await this.log(input.businessId, phone, input.text, 'skipped', 'WhatsApp Cloud API is not configured', input.template?.name ?? null);
+      await this.log(input.businessId, phone, input.text, 'skipped', 'WhatsApp API is not configured', input.template?.name ?? null);
       this.logger.warn(`WhatsApp skipped (not configured) for ${phone.slice(0, 6)}***`);
       return { sent: false, usedTemplate: false, reason: 'not_configured' };
+    }
+
+    if (this.provider === 'evolution') {
+      try {
+        const baseUrl = this.config.get<string>('whatsapp.evolutionApiUrl')!;
+        const apiKey = this.config.get<string>('whatsapp.evolutionApiKey')!;
+        const instance = this.config.get<string>('whatsapp.evolutionInstance') || 'ojaly';
+        const url = `${baseUrl}/message/sendText/${instance}`;
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            apikey: apiKey,
+          },
+          body: JSON.stringify({
+            number: phone,
+            text: input.text,
+          }),
+          signal: AbortSignal.timeout(15000),
+        });
+        const data = (await response.json().catch(() => ({}))) as Record<string, any>;
+        if (!response.ok) {
+          throw new Error(data?.message || data?.error || `Evolution API ${response.status}`);
+        }
+        const metaId = data?.key?.id || data?.id || null;
+        await this.messages.create({
+          businessId: input.businessId || null,
+          direction: 'outbound',
+          phone,
+          body: input.text,
+          messageType: 'text',
+          templateName: null,
+          metaMessageId: metaId,
+          status: 'sent',
+        });
+        await this.contacts.updateOne({ phone }, { $set: { lastOutboundAt: new Date() } }).exec();
+        return { sent: true, usedTemplate: false };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Evolution API send failed';
+        await this.log(input.businessId || '', phone, input.text, 'failed', message, null);
+        this.logger.error(`Evolution API send failed: ${message}`);
+        return { sent: false, usedTemplate: false, reason: 'send_failed' };
+      }
     }
 
     const inWindow = await this.withinCustomerWindow(phone);
