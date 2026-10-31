@@ -479,26 +479,25 @@ export class PaymentsService {
 
   private async nextUrlFor(payment: Record<string, unknown> | null): Promise<string | null> {
     if (!payment) return null;
-    const base = this.config.get('appUrl');
     if (payment.purpose === 'order' && payment.orderId) {
       const order = await this.orders.findById(payment.orderId).select('publicToken').lean().exec();
-      if (order?.publicToken) return `${base}/order/${order.publicToken}`;
+      if (order?.publicToken) return `/order/${order.publicToken}`;
     }
     if (payment.purpose === 'debt' && payment.debtId) {
       const debt = await this.debts.findById(payment.debtId).select('publicToken').lean().exec();
-      if (debt?.publicToken) return `${base}/pay/debt/${debt.publicToken}?paid=1`;
+      if (debt?.publicToken) return `/pay/debt/${debt.publicToken}?paid=1`;
     }
     if (payment.purpose === 'invoice' && payment.invoiceId) {
       const invoice = await this.invoices.findById(payment.invoiceId).select('publicToken').lean().exec();
-      if (invoice?.publicToken) return `${base}/invoice/${invoice.publicToken}?paid=1`;
+      if (invoice?.publicToken) return `/invoice/${invoice.publicToken}?paid=1`;
     }
     if (payment.purpose === 'booking' && payment.bookingId) {
       const booking = await this.bookings.findById(payment.bookingId).select('publicToken').lean().exec();
-      if (booking?.publicToken) return `${base}/booking/${booking.publicToken}?paid=1`;
+      if (booking?.publicToken) return `/booking/${booking.publicToken}?paid=1`;
     }
     if (payment.purpose === 'package' && payment.packagePurchaseId) {
       const purchase = await this.packagePurchases.findById(payment.packagePurchaseId).select('publicToken').lean().exec();
-      if (purchase?.publicToken) return `${base}/package/${purchase.publicToken}?paid=1`;
+      if (purchase?.publicToken) return `/package/${purchase.publicToken}?paid=1`;
     }
     return null;
   }
