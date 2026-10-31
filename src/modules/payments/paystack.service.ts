@@ -58,7 +58,7 @@ export class PaystackService {
       amount: input.amountKobo,
       reference: input.reference,
       callback_url: input.callbackUrl,
-      metadata: input.metadata,
+      metadata: { app: 'ojaly', ...input.metadata },
       currency: 'NGN',
       channels: ['card', 'bank', 'ussd', 'qr', 'mobile_money', 'bank_transfer'],
     };
