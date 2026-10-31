@@ -218,7 +218,7 @@ export class BotService {
       let draft = heuristic;
       if (strict.items.length > 0) {
         const total = strict.items.reduce((s, i) => s + i.unitPriceKobo * i.quantity, 0);
-        const owed = strict.amountOwedKobo ?? 0;
+        const owed = strict.amountOwedKobo ?? heuristic.amountOwedKobo ?? 0;
         draft = {
           ...heuristic,
           customerName: strict.customerName || heuristic.customerName,
@@ -231,7 +231,7 @@ export class BotService {
             rawPhrase: text.slice(0, 200),
           })),
           amountOwedKobo: owed,
-          amountPaidKobo: strict.amountPaidKobo ?? (owed ? Math.max(0, total - owed) : null),
+          amountPaidKobo: strict.amountPaidKobo ?? heuristic.amountPaidKobo ?? (owed ? Math.max(0, total - owed) : null),
           deliveryFeeKobo: strict.deliveryFeeKobo,
           dueDate: strict.dueDate,
           notes: text.slice(0, 1000),
@@ -445,10 +445,10 @@ export class BotService {
     dueDate: string;
   } {
     const cleaned = text.replace(/(?:\+?234|0)[789][01]\d{8}/g, ' ');
-    const owesMatch = cleaned.match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s+(?:owes?|owing)\s+(?:₦|N)?\s*([\d,]+)/);
+    const owesMatch = cleaned.match(/(?:([a-zA-Z][a-zA-Z0-9'.-]+(?:\s+[a-zA-Z][a-zA-Z0-9'.-]+)?)\s+)?(?:owes?|owing|debt|balance)\s+(?:₦|N)?\s*([\d,]+)/i);
     const salesText = cleaned
-      .replace(/[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?\s+(?:owes?|owing)\s+(?:₦|N)?\s*[\d,]+/g, ' ')
-      .replace(/\b(?:paid|paid\s+me)\s+(?:₦|N)?\s*[\d,]+/gi, ' ')
+      .replace(/(?:[a-zA-Z][a-zA-Z0-9'.-]+(?:\s+[a-zA-Z][a-zA-Z0-9'.-]+)?\s+)?(?:owes?|owing|debt|balance)\s+(?:₦|N)?\s*[\d,]+/gi, ' ')
+      .replace(/\b(?:paid|paid\s+me|deposit)\s+(?:₦|N)?\s*[\d,]+/gi, ' ')
       .replace(/\b(?:delivery|shipping)\s+(?:₦|N)?\s*[\d,]+/gi, ' ');
     const startsWithSale = /(?:sold|sell|sale)\b/i.test(salesText);
     const matches = startsWithSale
@@ -472,7 +472,11 @@ export class BotService {
       });
     }
     const phoneMatch = text.match(/(?:\+?234|0)[789][01]\d{8}/);
-    const customerName = owesMatch?.[1] || text.match(/CUSTOMER\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i)?.[1] || text.match(/(?:to|for)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\b/)?.[1] || null;
+    const rawCustomerName = (owesMatch?.[1] ? owesMatch[1].trim() : null) ||
+      text.match(/CUSTOMER\s+([a-zA-Z][a-zA-Z0-9'.-]+(?:\s+[a-zA-Z][a-zA-Z0-9'.-]+)?)/i)?.[1]?.trim() ||
+      text.match(/(?:to|for)\s+([a-zA-Z][a-zA-Z0-9'.-]+(?:\s+[a-zA-Z][a-zA-Z0-9'.-]+)?)\b/i)?.[1]?.trim() ||
+      null;
+    const customerName = rawCustomerName ? rawCustomerName.charAt(0).toUpperCase() + rawCustomerName.slice(1) : null;
     const address = text.match(/(?:deliver(?:y)?(?:\s+to)?|address)\s+([^.\n,;]{3,120})/i)?.[1]?.trim() || null;
     const delivery = text.match(/(?:delivery|shipping)\s+(?:₦|N)?\s*([\d,]+)/i)?.[1];
     const paid = text.match(/\b(?:paid|deposit)\s+(?:₦|N)?\s*([\d,]+)/i)?.[1];

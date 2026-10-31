@@ -305,15 +305,18 @@ export class ChatParserService {
 
   private extractName(text: string): string | null {
     const patterns = [
-      /(?:my name is|i am|i'm|this is|call me)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i,
-      /(?:customer|name)\s*[:\-]\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i,
-      /(?:for|to)\s+([A-Z][a-z]+)\s*(?:,|\.|$)/im,
+      /([a-zA-Z][a-zA-Z0-9'.-]+(?:\s+[a-zA-Z][a-zA-Z0-9'.-]+)?)\s+(?:owes?|owing|debt|balance)/i,
+      /(?:my name is|i am|i'm|this is|call me)\s+([a-zA-Z][a-zA-Z0-9'.-]+(?:\s+[a-zA-Z][a-zA-Z0-9'.-]+)?)/i,
+      /(?:customer|name)\s*[:\-]\s*([a-zA-Z][a-zA-Z0-9'.-]+(?:\s+[a-zA-Z][a-zA-Z0-9'.-]+)?)/i,
+      /(?:for|to)\s+([a-zA-Z][a-zA-Z0-9'.-]+)\s*(?:,|\.|$)/im,
     ];
     for (const pattern of patterns) {
       const match = text.match(pattern);
       if (match?.[1]) {
         const name = match[1].trim();
-        if (!/^(Lagos|Abuja|Nigeria|Today|Tomorrow|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)$/i.test(name)) return name;
+        if (!/^(Lagos|Abuja|Nigeria|Today|Tomorrow|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|Customer|Someone)$/i.test(name)) {
+          return name.charAt(0).toUpperCase() + name.slice(1);
+        }
       }
     }
     return null;
@@ -370,9 +373,9 @@ export class ChatParserService {
   private maskNonItems(text: string): string {
     let masked = text;
     masked = masked.replace(/(?:\+?234|0)[789][01]\d{8}/g, ' ');
-    masked = masked.replace(/(?:my name is|i am|i'm|this is|call me|name\s*:)\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?/gi, ' ');
+    masked = masked.replace(/(?:my name is|i am|i'm|this is|call me|name\s*:)\s+[a-zA-Z][a-zA-Z0-9'.-]+(?:\s+[a-zA-Z][a-zA-Z0-9'.-]+)?/gi, ' ');
     masked = masked.replace(/(?:deliver(?:y)?(?:\s+to)?|address\s*[:\-]?|location\s*[:\-]?|drop(?:\s*off)?(?:\s+at)?)\s+[^.\n,;]{3,120}/gi, ' ');
-    masked = masked.replace(/[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?\s+(?:owes?|owing)\s+(?:₦|ngn|N)?\s*\d[\d,]*/gi, ' ');
+    masked = masked.replace(/(?:[a-zA-Z][a-zA-Z0-9'.-]+(?:\s+[a-zA-Z][a-zA-Z0-9'.-]+)?\s+)?(?:owes?|owing|debt|balance)\s+(?:₦|ngn|N)?\s*\d[\d,]*/gi, ' ');
     masked = masked.replace(/\b(?:i\s+)?(?:have\s+)?(?:paid|deposit)\s+(?:₦|ngn|N)?\s*\d[\d,]*/gi, ' ');
     masked = masked.replace(/\b(?:delivery|shipping|dispatch)\s*(?:fee)?\s*(?:₦|ngn|N)?\s*\d[\d,]*/gi, ' ');
     masked = masked.replace(/\b(?:due|pay later|next week|tomorrow|today)\b/gi, ' ');
