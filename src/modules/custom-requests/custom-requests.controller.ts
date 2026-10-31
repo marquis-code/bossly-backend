@@ -4,7 +4,7 @@ import { Public } from '../../common/decorators/public.decorator';
 import { CurrentBusiness, Permissions } from '../../common/decorators/auth.decorators';
 import { PERMISSIONS } from '../../common/constants/permissions';
 import { CustomRequestsService } from './custom-requests.service';
-import { CreateCustomQuoteDto, CreateCustomRequestDto, CustomRequestMessageDto } from './custom-request.dto';
+import { AcceptCustomQuoteDto, CreateCustomQuoteDto, CreateCustomRequestDto, CustomRequestMessageDto } from './custom-request.dto';
 
 @ApiTags('Custom requests')
 @Controller('custom-requests')
@@ -31,8 +31,8 @@ export class CustomRequestsController {
 
   @Public()
   @Post('public/:token/accept')
-  accept(@Param('token') token: string) {
-    return this.requests.accept(token);
+  accept(@Param('token') token: string, @Body() dto: AcceptCustomQuoteDto) {
+    return this.requests.accept(token, dto?.startAt);
   }
 
   @ApiBearerAuth()

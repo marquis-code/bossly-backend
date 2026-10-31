@@ -9,6 +9,7 @@ import { MailService } from '../mail/mail.service';
 import { emailLayout } from '../mail/email-templates';
 import { normalizeNigerianPhone } from '../../common/utils/phone';
 import { sanitizeText } from '../../common/utils/sanitize';
+import { redactContactDetails } from '../../common/utils/redact-contact';
 import { formatNaira } from '../../common/utils/money';
 import { randomToken } from '../../common/utils/tokens';
 import { CustomRequest, CustomRequestDocument, CustomRequestQuote } from './custom-request.schema';
@@ -39,7 +40,7 @@ export class CustomRequestsService {
       length: sanitizeText(dto.length || '', 80), hairOption: dto.hairOption || 'not_sure',
       preferredDate: sanitizeText(dto.preferredDate || '', 20), preferredTime: sanitizeText(dto.preferredTime || '', 20),
       budgetKobo: dto.budgetKobo || 0, notes: sanitizeText(dto.notes || '', 2000),
-      referenceUrls: dto.referenceUrls || [], status: 'new', quote: null, messages: [],
+      referenceUrls: dto.referenceUrls || [], referenceImages: dto.referenceImages || [], status: 'new', quote: null, messages: [],
     });
     await this.notifications.create({
       businessId: business._id.toString(), type: 'custom_request',
@@ -83,12 +84,14 @@ export class CustomRequestsService {
     const totalKobo = items.reduce((sum, item) => sum + item.amountKobo, 0);
     if (totalKobo <= 0) throw new BadRequestException('Quote total must be greater than zero.');
     if (dto.depositKobo > totalKobo) throw new BadRequestException('Deposit cannot exceed the quote total.');
-    const startAt = new Date(dto.startAt);
-    if (Number.isNaN(startAt.getTime()) || startAt.getTime() < Date.now() - 60_000) throw new BadRequestException('Choose a valid future appointment time.');
+    const rawSlots = dto.slots?.length ? dto.slots : dto.startAt ? [dto.startAt] : [];
+    const slots = [...new Set(rawSlots)].map((value) => new Date(value)).filter((date) => !Number.isNaN(date.getTime()) && date.getTime() > Date.now() - 60_000).slice(0, 4);
+    if (!slots.length) throw new BadRequestException('Choose at least one valid future appointment time.');
+    const startAt = slots[0];
     const expiresAt = new Date(Date.now() + Math.min(168, Math.max(1, dto.expiresInHours || 48)) * 3600_000);
     const quote: CustomRequestQuote = {
       items, totalKobo, depositKobo: dto.depositKobo, durationMinutes: dto.durationMinutes,
-      startAt, providerId: dto.providerId || null, note: sanitizeText(dto.note || '', 1000),
+      startAt, slots, providerId: dto.providerId || null, note: redactContactDetails(sanitizeText(dto.note || '', 1000)).text,
       expiresAt, createdAt: new Date(), serviceKobo: dto.serviceKobo || 0,
       hairKobo: dto.hairKobo || 0, addOnKobo: dto.addOnKobo || 0,
     };
@@ -96,14 +99,15 @@ export class CustomRequestsService {
     request.status = 'quoted';
     await request.save();
     const business = await this.businesses.findById(businessId).lean().exec();
-    if (business) await this.sendStatusEmail(request, business, 'You have a custom quote', `${request.serviceName}: ${formatNaira(totalKobo)} · ${new Date(startAt).toLocaleString('en-NG', { timeZone: business.timezone || 'Africa/Lagos' })}. Review and accept inside Ojaly.`, 'Review quote');
+    if (business) await this.sendStatusEmail(request, business, 'You have a custom quote', `${request.serviceName}: ${formatNaira(totalKobo)} · ${slots.map((slot) => slot.toLocaleString('en-NG', { timeZone: business.timezone || 'Africa/Lagos', weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })).join(' · ')}. Choose a time and accept inside Ojaly.`, 'Review quote');
     return this.vendorView(request);
   }
 
   async message(businessId: string, id: string, body: string) {
     const request = await this.requests.findOne({ _id: id, businessId }).exec();
     if (!request) throw new NotFoundException('Custom request not found.');
-    request.messages.push({ sender: 'business', name: 'Business', body: sanitizeText(body, 2000), createdAt: new Date() });
+    const redaction = redactContactDetails(sanitizeText(body, 2000));
+    request.messages.push({ sender: 'business', name: 'Business', body: redaction.text, createdAt: new Date(), redacted: redaction.redacted });
     await request.save();
     const business = await this.businesses.findById(businessId).lean().exec();
     if (business) await this.sendStatusEmail(request, business, 'New message about your request', body, 'Open request');
@@ -113,12 +117,13 @@ export class CustomRequestsService {
   async messagePublic(token: string, body: string) {
     const request = await this.requests.findOne({ publicToken: token }).exec();
     if (!request) throw new NotFoundException('Request not found.');
-    request.messages.push({ sender: 'customer', name: request.customerName, body: sanitizeText(body, 2000), createdAt: new Date() });
+    const redaction = redactContactDetails(sanitizeText(body, 2000));
+    request.messages.push({ sender: 'customer', name: request.customerName, body: redaction.text, createdAt: new Date(), redacted: redaction.redacted });
     await request.save();
     await this.notifications.create({
       businessId: request.businessId, type: 'custom_request',
       title: `Customer replied · ${request.serviceName}`,
-      message: body.slice(0, 140), tone: 'info', data: { requestId: request._id.toString() },
+      message: redaction.text.slice(0, 140), tone: 'info', data: { requestId: request._id.toString() },
     }).catch(() => undefined);
     return this.publicView(request, await this.businesses.findById(request.businessId).lean().exec());
   }
@@ -128,12 +133,12 @@ export class CustomRequestsService {
     if (!request) throw new NotFoundException('Custom request not found.');
     request.status = 'declined';
     request.declinedAt = new Date();
-    if (reason) request.messages.push({ sender: 'business', name: 'Business', body: sanitizeText(reason, 2000), createdAt: new Date() });
+    if (reason) { const redaction = redactContactDetails(sanitizeText(reason, 2000)); request.messages.push({ sender: 'business', name: 'Business', body: redaction.text, createdAt: new Date(), redacted: redaction.redacted }); }
     await request.save();
     return this.vendorView(request);
   }
 
-  async accept(token: string) {
+  async accept(token: string, selectedStartAt?: string) {
     const request = await this.requests.findOne({ publicToken: token }).exec();
     if (!request) throw new NotFoundException('Request not found.');
     if (request.status === 'booked') throw new BadRequestException('This quote is already booked.');
@@ -144,13 +149,16 @@ export class CustomRequestsService {
       throw new BadRequestException('This quote has expired. Ask the business for an updated quote.');
     }
     const quote = request.quote;
+    const offeredSlots = (quote.slots?.length ? quote.slots : [quote.startAt]).map((date) => new Date(date).toISOString());
+    const chosen = selectedStartAt ? new Date(selectedStartAt) : new Date(quote.startAt);
+    if (Number.isNaN(chosen.getTime()) || !offeredSlots.includes(chosen.toISOString())) throw new BadRequestException('Choose one of the times offered in this quote.');
     const booking = await this.bookings.create(
       'custom-request',
       request.businessId,
       {
         serviceId: request.serviceId,
         providerId: quote.providerId || undefined,
-        startAt: quote.startAt.toISOString(),
+        startAt: chosen.toISOString(),
         customerName: request.customerName,
         customerPhone: request.customerPhone,
         customerEmail: request.customerEmail || undefined,
@@ -176,8 +184,8 @@ export class CustomRequestsService {
       customerName: request.customerName, customerPhone: request.customerPhone, customerEmail: request.customerEmail,
       style: request.style, length: request.length, hairOption: request.hairOption,
       preferredDate: request.preferredDate, preferredTime: request.preferredTime, budgetKobo: request.budgetKobo,
-      notes: request.notes, referenceUrls: request.referenceUrls, status: request.status,
-      quote: request.quote, messages: request.messages, bookingId: request.bookingId, bookingPublicToken: request.bookingPublicToken,
+      notes: request.notes, referenceUrls: request.referenceUrls || [], referenceImages: request.referenceImages || [], status: request.status,
+      quote: request.quote, messages: request.messages, lastMessageRedacted: Boolean(request.messages?.at(-1)?.redacted), bookingId: request.bookingId, bookingPublicToken: request.bookingPublicToken,
       createdAt: (request as { createdAt?: Date }).createdAt,
     };
   }

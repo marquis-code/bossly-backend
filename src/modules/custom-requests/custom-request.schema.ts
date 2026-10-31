@@ -16,12 +16,13 @@ export interface CustomRequestQuote {
   depositKobo: number;
   durationMinutes: number;
   startAt: Date;
+  slots: Date[];
   providerId: string | null;
   note: string;
   expiresAt: Date;
   createdAt: Date;
 }
-export interface CustomRequestMessage { sender: CustomRequestSender; name: string; body: string; createdAt: Date; }
+export interface CustomRequestMessage { sender: CustomRequestSender; name: string; body: string; createdAt: Date; redacted?: boolean; }
 
 @Schema(schemaOptions('custom_requests'))
 export class CustomRequest {
@@ -72,6 +73,9 @@ export class CustomRequest {
 
   @Prop({ type: [String], default: [] })
   referenceUrls: string[];
+
+  @Prop({ type: [String], default: [] })
+  referenceImages: string[];
 
   @Prop({ type: String, enum: ['new', 'quoted', 'accepted', 'booked', 'declined', 'expired'], default: 'new', index: true })
   status: CustomRequestStatus;
