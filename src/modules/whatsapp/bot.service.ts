@@ -98,12 +98,15 @@ export class BotService {
     }
 
     let contact = await this.contacts.findOne({ phone }).exec();
-    if (!contact) {
-      await this.whatsapp.sendTextDirect('', phone, 'This number is not linked to a Ojaly business yet. Open Ojaly → Settings → WhatsApp to get a 6-digit link code.');
-      return;
-    }
-    if (!contact.verifiedAt || !contact.businessId) {
-      await this.whatsapp.sendTextDirect(contact.businessId || '', phone, 'This number is not linked yet. Open Ojaly → Settings → WhatsApp, tap “Get code”, then send *LINK 123456* here.');
+    if (!contact || !contact.verifiedAt || !contact.businessId) {
+      const isExplicitBotIntent = /^(help|menu|ojaly|link)\b/i.test(text);
+      if (isExplicitBotIntent) {
+        await this.whatsapp.sendTextDirect(
+          contact?.businessId || '',
+          phone,
+          'This number is not linked to an Ojaly business yet. Open Ojaly → Settings → WhatsApp to get a 6-digit link code, then send *LINK 123456* here.',
+        );
+      }
       return;
     }
 
