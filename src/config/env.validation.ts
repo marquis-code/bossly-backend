@@ -37,6 +37,8 @@ export const envSchema = Joi.object({
   LLM_API_KEY: Joi.string().optional().allow(''),
   LLM_BASE_URL: Joi.string().uri().default('https://api.openai.com/v1'),
   LLM_MODEL: Joi.string().default('gpt-4o-mini'),
+  GEMINI_API_KEY: Joi.string().optional().allow(''),
+  GEMINI_MODEL: Joi.string().default('gemini-1.5-flash'),
   SEED_SUPER_ADMIN_EMAIL: Joi.string().email().optional().allow(''),
   SEED_SUPER_ADMIN_PASSWORD: Joi.string().min(8).optional().allow(''),
 }).unknown(true);

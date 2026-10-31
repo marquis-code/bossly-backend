@@ -46,7 +46,7 @@ export interface AppConfig {
     evolutionApiKey?: string;
     evolutionInstance?: string;
   };
-  llm: { apiKey?: string; baseUrl: string; model: string };
+  llm: { apiKey?: string; baseUrl: string; model: string; geminiApiKey?: string; geminiModel?: string };
   seed: { email?: string; password?: string };
 }
 
@@ -144,6 +144,8 @@ export default (): AppConfig => {
     apiKey: process.env.LLM_API_KEY,
     baseUrl: process.env.LLM_BASE_URL || 'https://api.openai.com/v1',
     model: process.env.LLM_MODEL || 'gpt-4o-mini',
+    geminiApiKey: process.env.GEMINI_API_KEY,
+    geminiModel: process.env.GEMINI_MODEL || 'gemini-1.5-flash',
   },
   seed: {
     email: process.env.SEED_SUPER_ADMIN_EMAIL,

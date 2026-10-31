@@ -86,7 +86,7 @@ export class BotService {
     private readonly config: ConfigService,
   ) {}
 
-  async handleIncoming(input: { phone: string; name?: string; text: string }): Promise<void> {
+  async handleIncoming(input: { phone: string; name?: string; text: string; audioTranscript?: string }): Promise<void> {
     const phone = normalizeNigerianPhone(input.phone) || input.phone;
     const text = String(input.text || '').trim().slice(0, 4000);
     if (!text) return;
@@ -140,7 +140,7 @@ export class BotService {
     }
     const expense = text.match(/^(?:expense|spent|spend)\s+(?:₦|N)?\s*([\d,]+(?:\.\d{1,2})?)\s*(?:on\s+)?(.*)$/i);
     if (expense) {
-      await this.recordExpense(contact, expense[1], expense[2]);
+      await this.recordExpense(contact, expense[1], expense[2], input.audioTranscript);
       return;
     }
     if (command === 'stock') {
@@ -166,7 +166,7 @@ export class BotService {
       return;
     }
 
-    await this.parseSaleIntent(contact, business.name, text);
+    await this.parseSaleIntent(contact, business.name, text, input.audioTranscript);
   }
 
   private async linkPhone(phone: string, code: string, displayName?: string): Promise<void> {
@@ -210,7 +210,12 @@ export class BotService {
     );
   }
 
-  private async parseSaleIntent(contact: WhatsappContactDocument, businessName: string, text: string): Promise<void> {
+  private async parseSaleIntent(
+    contact: WhatsappContactDocument,
+    businessName: string,
+    text: string,
+    audioTranscript?: string,
+  ): Promise<void> {
     try {
       const catalog = await this.products.find({ businessId: contact.businessId, isActive: true }).lean().exec() as unknown as Product[];
       const heuristic = await this.parser.parse(contact.businessId!, text, { allowLlm: false });
@@ -265,7 +270,8 @@ export class BotService {
       const amountPaid = draft.amountPaidKobo != null ? Math.min(draft.amountPaidKobo, total) : Math.max(0, total - owed);
       const amountOwed = Math.max(0, total - amountPaid);
       const lines = draft.items.map((i) => `• ${i.quantity} × ${i.name}${i.variantName && i.variantName !== 'Standard' ? ` (${i.variantName})` : ''} — ${formatNaira(i.unitPriceKobo * i.quantity)}`).join('\n');
-      const summary = `🧾 *Confirm sale for ${businessName}*\n\n${lines}\n\nSubtotal: ${formatNaira(draft.totals.subtotalKobo - draft.totals.discountKobo)}\n${draft.totals.deliveryFeeKobo ? `Delivery: ${formatNaira(draft.totals.deliveryFeeKobo)}\n` : ''}*Total: ${formatNaira(total)}*\nPaid: ${formatNaira(amountPaid)}${amountOwed ? `\nOwed: ${formatNaira(amountOwed)} (due ${lagosDisplay(draft.dueDate, 'd MMM')})` : ''}\nCustomer: ${customerName}\n\nReply *YES* to save, *NO* to cancel. You can undo for 15 minutes after saving.`;
+      const transcriptNote = audioTranscript ? `🎙️ _"${audioTranscript}"_\n\n` : '';
+      const summary = `${transcriptNote}🧾 *Confirm sale for ${businessName}*\n\n${lines}\n\nSubtotal: ${formatNaira(draft.totals.subtotalKobo - draft.totals.discountKobo)}\n${draft.totals.deliveryFeeKobo ? `Delivery: ${formatNaira(draft.totals.deliveryFeeKobo)}\n` : ''}*Total: ${formatNaira(total)}*\nPaid: ${formatNaira(amountPaid)}${amountOwed ? `\nOwed: ${formatNaira(amountOwed)} (due ${lagosDisplay(draft.dueDate, 'd MMM')})` : ''}\nCustomer: ${customerName}\n\nReply *YES* to save, *NO* to cancel. You can undo for 15 minutes after saving.`;
       const pending: PendingSale = {
         type: 'sale',
         createdAt: new Date().toISOString(),
@@ -400,7 +406,12 @@ export class BotService {
     );
   }
 
-  private async recordExpense(contact: WhatsappContactDocument, rawAmount: string, rest: string): Promise<void> {
+  private async recordExpense(
+    contact: WhatsappContactDocument,
+    rawAmount: string,
+    rest: string,
+    audioTranscript?: string,
+  ): Promise<void> {
     const amountKobo = Math.round(Number(rawAmount.replace(/,/g, '')) * 100);
     if (!Number.isFinite(amountKobo) || amountKobo <= 0) {
       await this.reply(contact, 'That expense amount is not valid. Try: *EXPENSE 2500 transport*');
@@ -428,7 +439,8 @@ export class BotService {
         recurrence: 'none',
       });
       const label = category.replace('_', ' ');
-      await this.reply(contact, `✅ *Expense recorded*\n\n${formatNaira(amountKobo)} · ${label}${note ? `\n${note}` : ''}\n\nYour daily summary now includes this cost. Open Ojaly: ${this.config.get('appUrl')}/app/expenses`);
+      const transcriptNote = audioTranscript ? `🎙️ _"${audioTranscript}"_\n\n` : '';
+      await this.reply(contact, `${transcriptNote}✅ *Expense recorded*\n\n${formatNaira(amountKobo)} · ${label}${note ? `\n${note}` : ''}\n\nYour daily summary now includes this cost. Open Ojaly: ${this.config.get('appUrl')}/app/expenses`);
     } catch (error) {
       await this.reply(contact, `I couldn't save that expense: ${error instanceof Error ? error.message : 'unknown error'}.`);
     }

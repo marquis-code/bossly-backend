@@ -19,9 +19,14 @@ import { createHmac, timingSafeEqual } from 'crypto';
 import type { Request, Response } from 'express';
 import { Model } from 'mongoose';
 import { Public } from '../../common/decorators/public.decorator';
+import { normalizeNigerianPhone } from '../../common/utils/phone';
 import { WhatsappClientService } from './whatsapp-client.service';
 import { WhatsappMessage, WhatsappMessageDocument } from './whatsapp-message.schema';
+import { WhatsappContact, WhatsappContactDocument } from './whatsapp-contact.schema';
+import { Product, ProductDocument } from '../products/product.schema';
+import { Business, BusinessDocument } from '../businesses/business.schema';
 import { BotService } from './bot.service';
+import { LlmParserService } from './llm-parser.service';
 
 @ApiExcludeController()
 @Controller('whatsapp')
@@ -30,7 +35,11 @@ export class WhatsappWebhookController {
     private readonly config: ConfigService,
     private readonly client: WhatsappClientService,
     private readonly bot: BotService,
+    private readonly llm: LlmParserService,
     @InjectModel(WhatsappMessage.name) private readonly messages: Model<WhatsappMessageDocument>,
+    @InjectModel(WhatsappContact.name) private readonly contacts: Model<WhatsappContactDocument>,
+    @InjectModel(Product.name) private readonly products: Model<ProductDocument>,
+    @InjectModel(Business.name) private readonly businesses: Model<BusinessDocument>,
   ) {}
 
   @Public()
@@ -178,7 +187,7 @@ export class WhatsappWebhookController {
         }
 
         const messageObj = item.message as Record<string, unknown> | undefined;
-        const text = String(
+        let text = String(
           messageObj?.conversation ||
           (messageObj?.extendedTextMessage as Record<string, unknown>)?.text ||
           (messageObj?.imageMessage as Record<string, unknown>)?.caption ||
@@ -190,6 +199,33 @@ export class WhatsappWebhookController {
           '',
         ).trim();
 
+        const isAudio = item.messageType === 'audioMessage' || Boolean(messageObj?.audioMessage);
+        let audioTranscript: string | undefined;
+
+        if (!text && isAudio) {
+          const contact = await this.contacts.findOne({ phone: normalizeNigerianPhone(phone) || phone }).lean().exec();
+          if (contact?.businessId && contact?.verifiedAt) {
+            const business = await this.businesses.findById(contact.businessId).select('name').lean().exec();
+            const catalog = (await this.products.find({ businessId: contact.businessId, isActive: true }).select('name priceKobo').lean().exec()) || [];
+            const media = await this.client.downloadMediaBase64(item);
+            if (media?.base64) {
+              const parsedAudio = await this.llm.parseAudioVoiceNote(
+                media.base64,
+                media.mimetype,
+                catalog as { name: string; priceKobo: number }[],
+                business?.name || 'this business',
+              );
+              if (parsedAudio?.command) {
+                text = parsedAudio.command;
+                audioTranscript = parsedAudio.transcript;
+              } else if (parsedAudio?.transcript) {
+                audioTranscript = parsedAudio.transcript;
+                text = parsedAudio.transcript;
+              }
+            }
+          }
+        }
+
         const pushName = item.pushName ? String(item.pushName) : undefined;
         const timestamp = item.messageTimestamp
           ? new Date(Number(item.messageTimestamp) * 1000)
@@ -197,10 +233,10 @@ export class WhatsappWebhookController {
 
         await this.client.recordInbound({
           phone,
-          body: text || '[media]',
+          body: text || (isAudio ? '[voice note]' : '[media]'),
           metaMessageId: id,
           displayName: pushName,
-          messageType: text ? 'text' : String(item.messageType || 'media'),
+          messageType: isAudio ? 'audio' : text ? 'text' : String(item.messageType || 'media'),
           timestamp,
         });
 
@@ -213,11 +249,19 @@ export class WhatsappWebhookController {
         if (!claimed) continue;
 
         if (!text) {
-          await this.client.sendTextDirect('', phone, 'I can only read text right now. Send your sale as a message, for example: sold 2 shirts 5000, Tola owes 2000.');
+          if (isAudio) {
+            if (!this.llm.hasGemini) {
+              await this.client.sendTextDirect('', phone, '🎙️ Voice note received, but Speech-to-Text is not active yet (GEMINI_API_KEY is not configured). Send your sale as text for now.');
+            } else {
+              await this.client.sendTextDirect('', phone, '🎙️ I heard your voice note, but could not detect a command. Try saying: "sold 2 Vintage Denim Jacket 10000, James owes 2000" or "expense 2500 transport".');
+            }
+          } else {
+            await this.client.sendTextDirect('', phone, 'I can only read text and voice notes right now. Send your sale as a message, for example: sold 2 shirts 5000, Tola owes 2000.');
+          }
           continue;
         }
 
-        await this.bot.handleIncoming({ phone, name: pushName, text });
+        await this.bot.handleIncoming({ phone, name: pushName, text, audioTranscript });
       }
     } else if (event === 'messages.update') {
       // 2. Message status updates (sent, delivered, read, failed)

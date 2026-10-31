@@ -235,6 +235,44 @@ export class WhatsappClientService {
     ).exec();
   }
 
+  async downloadMediaBase64(messageItem: Record<string, unknown>): Promise<{ base64: string; mimetype: string } | null> {
+    if (this.provider !== 'evolution') return null;
+    const baseUrl = this.config.get<string>('whatsapp.evolutionApiUrl');
+    const apiKey = this.config.get<string>('whatsapp.evolutionApiKey');
+    const instance = this.config.get<string>('whatsapp.evolutionInstance') || 'ojaly';
+    if (!baseUrl || !apiKey) return null;
+
+    try {
+      const url = `${baseUrl}/chat/getBase64FromMediaMessage/${instance}`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: apiKey,
+        },
+        body: JSON.stringify({
+          message: messageItem,
+          convertToMp4: false,
+        }),
+        signal: AbortSignal.timeout(20000),
+      });
+
+      if (!response.ok) {
+        this.logger.warn(`Evolution API getBase64 failed with status: ${response.status}`);
+        return null;
+      }
+
+      const data = (await response.json().catch(() => ({}))) as Record<string, any>;
+      const base64 = typeof data.base64 === 'string' ? data.base64.replace(/^data:[^;]+;base64,/, '') : null;
+      const mimetype = typeof data.mimetype === 'string' ? data.mimetype : 'audio/ogg';
+      if (!base64) return null;
+      return { base64, mimetype };
+    } catch (error) {
+      this.logger.warn(`downloadMediaBase64 failed: ${error instanceof Error ? error.message : 'unknown'}`);
+      return null;
+    }
+  }
+
   private async log(
     businessId: string,
     phone: string,
